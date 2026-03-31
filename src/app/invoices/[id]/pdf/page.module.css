@@ -1,0 +1,173 @@
+.printContainer {
+  background-color: #fff;
+  min-height: 100vh;
+  padding: 40px;
+  font-family: var(--font-family-body);
+  color: #1F2937;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.invoiceHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 40px;
+  border-bottom: 2px solid #E5E7EB;
+  padding-bottom: 20px;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+}
+
+.brandName {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0F3B8C;
+  letter-spacing: -0.5px;
+}
+
+.brandDetails {
+  font-size: 12px;
+  color: #6B7280;
+  margin-top: 4px;
+  line-height: 1.6;
+}
+
+.invoiceTitle {
+  font-size: 32px;
+  font-weight: 300;
+  color: #1F2937;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  text-align: right;
+}
+
+.invoiceMeta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  text-align: right;
+  font-size: 12px;
+}
+
+.metaLabel {
+  font-weight: 600;
+  color: #6B7280;
+}
+
+.metaValue {
+  font-weight: 700;
+  color: #1F2937;
+}
+
+.billingSection {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 40px;
+}
+
+.billBox {
+  flex: 1;
+}
+
+.billTitle {
+  font-size: 11px;
+  font-weight: 700;
+  color: #9CA3AF;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.billContent {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #374151;
+}
+
+.invoiceTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 30px;
+}
+
+.invoiceTable th {
+  background-color: #F8FAFC;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 12px;
+  text-align: left;
+  border-top: 1px solid #E2E8F0;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.invoiceTable td {
+  padding: 16px 12px;
+  font-size: 14px;
+  color: #1E293B;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.textRight {
+  text-align: right !important;
+}
+
+.textCenter {
+  text-align: center !important;
+}
+
+.totalsSection {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 40px;
+}
+
+.totalsBox {
+  width: 300px;
+}
+
+.totalRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 14px;
+  color: #475569;
+}
+
+.totalSummary {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0F3B8C;
+  border-top: 2px solid #E2E8F0;
+  margin-top: 8px;
+}
+
+.footer {
+  text-align: center;
+  font-size: 11px;
+  color: #94A3B8;
+  border-top: 1px dashed #E2E8F0;
+  padding-top: 20px;
+  margin-top: 40px;
+}
+
+@media print {
+  @page {
+    margin: 0;
+    size: A4 portrait;
+  }
+  body {
+    background-color: #fff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}

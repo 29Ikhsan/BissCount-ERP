@@ -1,0 +1,324 @@
+.container {
+  padding: var(--space-6);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: var(--space-6);
+}
+
+.pageTitle {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  color: var(--color-primary-dark);
+  margin-bottom: var(--space-2);
+}
+
+.pageSubtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.headerActions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.btnPrimary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 16px;
+  background-color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  color: white;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btnPrimary:hover {
+  background-color: var(--color-primary-dark);
+}
+
+/* KPI CARDS */
+.kpiGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--space-6);
+  margin-bottom: var(--space-8);
+}
+
+.kpiCardBlue, .kpiCardRed, .kpiCardPurple {
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  position: relative;
+  overflow: hidden;
+}
+
+.kpiCardBlue {
+  background-color: #EFF6FF;
+  border: 1px solid #BFDBFE;
+}
+
+.kpiCardRed {
+  background-color: #FEF2F2;
+  border: 1px solid #FECACA;
+}
+
+.kpiCardPurple {
+  background-color: #F5F3FF;
+  border: 1px solid #DDD6FE;
+}
+
+.kpiLabel {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.kpiCardBlue .kpiLabel { color: #1E3A8A; }
+.kpiCardRed .kpiLabel { color: #991B1B; }
+.kpiCardPurple .kpiLabel { color: #5B21B6; }
+
+.kpiValue {
+  font-size: 1.8rem;
+  font-weight: 800;
+}
+
+.kpiCardBlue .kpiValue { color: #2563EB; }
+.kpiCardRed .kpiValue { color: #DC2626; }
+.kpiCardPurple .kpiValue { color: #7C3AED; }
+
+.kpiDesc {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  border-top: 1px solid rgba(0,0,0,0.05);
+  padding-top: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+/* LIST CONTAINER */
+.listContainer {
+  background-color: white;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.toolbar {
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #FAFAFA;
+}
+
+.searchBox {
+  position: relative;
+  width: 350px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-tertiary);
+}
+
+.searchInput {
+  width: 100%;
+  padding: 10px 12px 10px 36px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.searchInput:focus {
+  border-color: var(--color-primary);
+}
+
+/* TABS */
+.tabContainer {
+  display: flex;
+  gap: var(--space-6);
+}
+
+.tabBtn {
+  background: transparent;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 4px 0;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.tabBtn:hover {
+  color: var(--color-text-primary);
+}
+
+.tabBtnActive {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+/* TABLE */
+.contactTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.contactTable th {
+  text-align: left;
+  padding: var(--space-4) var(--space-6);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background-color: white;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.contactTable td {
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.contactTable tr:last-child td {
+  border-bottom: none;
+}
+
+.contactTable tr {
+  transition: background-color 0.2s;
+  cursor: pointer;
+}
+
+.contactTable tr:hover {
+  background-color: var(--color-surface-hover);
+}
+
+.contactInfoRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.contactAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.contactDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.contactName {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  font-size: 0.95rem;
+}
+
+.contactEmail {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+.badge {
+  display: inline-flex;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badgeCustomer {
+  background-color: #DBEAFE;
+  color: #1E40AF;
+}
+
+.badgeVendor {
+  background-color: #FEF3C7;
+  color: #B45309;
+}
+
+.badgeBoth {
+  background-color: #E0E7FF;
+  color: #4338CA;
+}
+
+.moneyText {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.moneyTextSecondary {
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.moneyTextDanger {
+  color: #DC2626;
+  font-weight: 600;
+}
+
+.moneyTextSuccess {
+  color: #059669;
+  font-weight: 600;
+}
+
+.textRight {
+  text-align: right;
+}
+
+.limitBar {
+  height: 6px;
+  background-color: #E5E7EB;
+  border-radius: 3px;
+  margin-top: 6px;
+  overflow: hidden;
+  width: 100px;
+  display: inline-block;
+}
+
+.limitFill {
+  height: 100%;
+  border-radius: 3px;
+  background-color: var(--color-primary);
+}
+
+.limitFillWarning {
+  background-color: #F59E0B;
+}
+
+.limitFillDanger {
+  background-color: #EF4444;
+}

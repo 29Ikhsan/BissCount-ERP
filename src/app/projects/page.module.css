@@ -1,0 +1,208 @@
+.container {
+  padding: var(--space-6);
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: var(--space-6);
+}
+
+.pageTitle {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  color: var(--color-primary-dark);
+  margin-bottom: var(--space-2);
+}
+
+.pageSubtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.btnPrimary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 16px;
+  background-color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  color: white;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btnPrimary:hover {
+  background-color: var(--color-primary-dark);
+}
+
+.kpiGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--space-6);
+  margin-bottom: var(--space-8);
+}
+
+.kpiCardBlue, .kpiCardGreen {
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  position: relative;
+  overflow: hidden;
+}
+
+.kpiCardBlue {
+  background-color: #EFF6FF;
+  border: 1px solid #BFDBFE;
+}
+
+.kpiCardGreen {
+  background-color: #F0FDF4;
+  border: 1px solid #BBF7D0;
+}
+
+.kpiLabel {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.kpiCardBlue .kpiLabel { color: #1E3A8A; }
+.kpiCardGreen .kpiLabel { color: #166534; }
+
+.kpiValue {
+  font-size: 1.8rem;
+  font-weight: 800;
+}
+
+.kpiCardBlue .kpiValue { color: #2563EB; }
+.kpiCardGreen .kpiValue { color: #15803D; }
+
+.listContainer {
+  background-color: white;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.projectTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.projectTable th {
+  text-align: left;
+  padding: var(--space-4) var(--space-6);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background-color: #F8FAFC;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.projectTable td {
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.projectTable tr:hover {
+  background-color: #FAFAFA;
+}
+
+.projectName {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  font-size: 0.95rem;
+  display: block;
+}
+
+.projectCode {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+.badge {
+  display: inline-flex;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badgeActive {
+  background-color: #D1FAE5;
+  color: #065F46;
+}
+
+.badgeClosed {
+  background-color: #F3F4F6;
+  color: #4B5563;
+}
+
+.moneyText {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.moneyTextSuccess {
+  color: #059669;
+  font-weight: 600;
+}
+
+.moneyTextDanger {
+  color: #DC2626;
+  font-weight: 600;
+}
+
+.textRight {
+  text-align: right;
+}
+
+.progressContainer {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.progressBar {
+  height: 6px;
+  background-color: #E5E7EB;
+  border-radius: 3px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.progressFill {
+  height: 100%;
+  background-color: var(--color-primary);
+  border-radius: 3px;
+}
+
+.progressFillWarning {
+  background-color: #F59E0B;
+}
+
+.progressFillDanger {
+  background-color: #EF4444;
+}
+
+.progressLabels {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}

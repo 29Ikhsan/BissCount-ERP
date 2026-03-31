@@ -1,0 +1,243 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// 1. SaaS Core & IAM (Identity & Access)
+// ==========================================
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users            User[]
+  accounts         Account[]
+  journalEntries   JournalEntry[]
+  invoices         Invoice[]
+  expenses         Expense[]
+  products         Product[]
+  warehouses       Warehouse[]
+  productionOrders ProductionOrder[]
+  purchaseOrders   PurchaseOrder[]
+  contacts         Contact[]
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  password  String // hashed password
+  role      String   @default("USER") // 'SUPERADMIN', 'ADMIN', 'ACCOUNTANT', 'WAREHOUSE_MANAGER', 'USER'
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  expensesApproved Expense[] @relation("ExpenseApprover")
+}
+
+// ==========================================
+// 2. Modul CRM & Kontak
+// ==========================================
+
+model Contact {
+  id           String   @id @default(uuid())
+  type         String   // 'COMPANY', 'INDIVIDUAL'
+  role         String   @default("Customer") // 'Customer', 'Vendor', 'Employee', 'Both'
+  name         String
+  email        String?
+  phone        String?
+  website      String?
+  currency     String   @default("USD")
+  paymentTerms String   @default("Due on Receipt")
+  address      String?
+  city         String?
+  postalCode   String?
+  country      String?
+  
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Relations
+  invoices       Invoice[]
+  purchaseOrders PurchaseOrder[]
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ==========================================
+// 3. Modul Akuntansi & Keuangan
+// ==========================================
+
+model Account {
+  id       String      @id @default(uuid())
+  code     String
+  name     String
+  type     String      // 'ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE'
+  balance  Float       @default(0)
+  tenantId String
+  tenant   Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Relations
+  journalLines JournalLine[]
+
+  @@unique([code, tenantId])
+}
+
+model JournalEntry {
+  id          String   @id @default(uuid())
+  date        DateTime
+  description String
+  reference   String?
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  lines JournalLine[]
+}
+
+model JournalLine {
+  id             String       @id @default(uuid())
+  journalEntryId String
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  accountId      String
+  account        Account      @relation(fields: [accountId], references: [id])
+  debit          Float        @default(0)
+  credit         Float        @default(0)
+}
+
+model Invoice {
+  id         String        @id @default(uuid())
+  invoiceNo  String
+  clientName String
+  date       DateTime
+  dueDate    DateTime
+  amount     Float
+  status     String        @default("PENDING") // 'DRAFT', 'PENDING', 'PAID', 'OVERDUE', 'CANCELLED'
+  tenantId   String
+  tenant     Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  contactId  String?
+  contact    Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  items InvoiceItem[]
+}
+
+model InvoiceItem {
+  id          String   @id @default(uuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  productId   String? // Can link to a product or be a manual entry
+  product     Product? @relation(fields: [productId], references: [id])
+  description String
+  quantity    Int
+  unitPrice   Float
+  total       Float
+}
+
+model Expense {
+  id           String        @id @default(uuid())
+  date         DateTime
+  merchant     String
+  category     String
+  amount       Float
+  status       String        @default("PENDING") // 'PENDING', 'APPROVED', 'REJECTED', 'REIMBURSED'
+  employeeName String?
+  receiptUrl   String?
+
+  approverId String?
+  approver   User?   @relation("ExpenseApprover", fields: [approverId], references: [id])
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+// ==========================================
+// 4. Modul Inventori & Supply Chain
+// ==========================================
+
+model Product {
+  id       String @id @default(uuid())
+  sku      String
+  name     String
+  category String
+  price    Float
+  cost     Float  @default(0)
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  inventoryLevels InventoryLevel[]
+  invoiceItems    InvoiceItem[]
+  bomItems        BOMItem[]
+
+  @@unique([sku, tenantId])
+}
+
+model Warehouse {
+  id       String  @id @default(uuid())
+  name     String
+  location String?
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  inventoryLevels InventoryLevel[]
+}
+
+model InventoryLevel {
+  id          String    @id @default(uuid())
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouseId String
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  quantity    Int       @default(0)
+  minQuantity Int       @default(0)
+
+  @@unique([productId, warehouseId])
+}
+
+model BOMItem {
+  id                String  @id @default(uuid())
+  finishedProductId String
+  rawProductId      String
+  rawProduct        Product @relation(fields: [rawProductId], references: [id], onDelete: Cascade)
+  quantityRequired  Float
+}
+
+model ProductionOrder {
+  id        String           @id @default(uuid())
+  orderNo   String
+  status    String           @default("PLANNED") // 'PLANNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'
+  productId String
+  quantity  Int
+  startDate DateTime?
+  endDate   DateTime?
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model PurchaseOrder {
+  id           String    @id @default(uuid())
+  poNumber     String
+  supplier     String
+  date         DateTime
+  expectedDate DateTime?
+  amount       Float     @default(0)
+  status       String    @default("PENDING") // 'PENDING', 'APPROVED', 'SHIPPED', 'DELIVERED', 'CANCELLED'
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  contactId  String?
+  contact    Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+}

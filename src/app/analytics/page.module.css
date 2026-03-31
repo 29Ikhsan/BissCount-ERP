@@ -1,0 +1,350 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding-bottom: var(--space-8);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+.pageTitle {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  color: var(--color-primary-dark);
+}
+
+.pageSubtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+/* Layout */
+.mainLayout {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: var(--space-6);
+}
+
+.leftCol, .rightCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* Metrics */
+.metricsGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+.metricCard {
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.metricHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+.metricLabel {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--color-text-tertiary);
+  letter-spacing: 0.05em;
+}
+
+.iconGreen {
+  color: var(--color-success);
+}
+
+.iconRed {
+  color: var(--color-danger);
+}
+
+.metricValue {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-primary-dark);
+  margin-bottom: var(--space-2);
+}
+
+.metricTrend {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-success);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.metricTrendRed {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-danger);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* AI Panel */
+.aiPanel {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(15, 59, 140, 0.05) 100%);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.aiHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+}
+
+.aiTitleBox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.aiIcon {
+  color: var(--color-primary);
+}
+
+.aiTitle {
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  color: var(--color-primary-dark);
+}
+
+.aiBadge {
+  background-color: var(--color-primary);
+  color: white;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
+.chatArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.chatBubbleSystem {
+  background-color: white;
+  border: 1px solid var(--color-border);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md) var(--radius-md) var(--radius-md) 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.chatOptions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.chatOptionBtn {
+  text-align: left;
+  background-color: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-primary);
+  transition: all 0.2s;
+}
+
+.chatOptionBtn:hover {
+  background-color: white;
+  border-color: var(--color-primary);
+  transform: translateX(2px);
+}
+
+.chatInputBox {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: auto;
+}
+
+.chatInput {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  background-color: white;
+}
+
+.chatInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(15, 59, 140, 0.1);
+}
+
+.chatSendBtn {
+  background-color: var(--color-primary);
+  color: white;
+  padding: 0 16px;
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.chatSendBtn:hover {
+  background-color: var(--color-primary-dark);
+}
+
+/* Charts */
+.chartCardFull {
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+}
+
+.chartHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-6);
+}
+
+.chartTitle {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.chartSubtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.legendGroup {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.dotHist {
+  width: 8px; height: 8px; border-radius: 50%; background-color: #94A3B8;
+}
+.dotBase {
+  width: 8px; height: 8px; border-radius: 50%; background-color: #0F3B8C;
+}
+.dotOpt {
+  width: 8px; height: 8px; border-radius: 50%; background-color: #3B82F6;
+}
+
+.chartContainer {
+  margin-left: -15px; /* Offset Recharts padding */
+}
+
+/* Scenario Grid */
+.scenarioGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.scenarioCard {
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.scenarioTitle {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 2px;
+}
+
+.scenarioDesc {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-4);
+}
+
+.runwayValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-primary-dark);
+  margin-bottom: var(--space-2);
+}
+
+.confidenceValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-success);
+  margin-bottom: var(--space-2);
+}
+
+.progressBarBg {
+  height: 6px;
+  background-color: var(--color-surface-hover);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progressBarFill {
+  height: 100%;
+  background-color: var(--color-primary);
+  border-radius: 3px;
+}
+
+.progressBarFillGreen {
+  height: 100%;
+  background-color: var(--color-success);
+  border-radius: 3px;
+}

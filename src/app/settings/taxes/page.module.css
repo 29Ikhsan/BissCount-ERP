@@ -1,0 +1,147 @@
+.container {
+  padding: var(--space-6);
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: var(--space-6);
+}
+
+.pageTitle {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  color: var(--color-primary-dark);
+  margin-bottom: var(--space-2);
+}
+
+.pageSubtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.btnPrimary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 16px;
+  background-color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  color: white;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btnPrimary:hover {
+  background-color: var(--color-primary-dark);
+}
+
+.card {
+  background-color: white;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+/* TABLE */
+.taxTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.taxTable th {
+  text-align: left;
+  padding: var(--space-4) var(--space-6);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background-color: #F8FAFC;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.taxTable td {
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.taxTable tr:last-child td {
+  border-bottom: none;
+}
+
+.taxTable tr:hover {
+  background-color: #FAFAFA;
+}
+
+.taxName {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  font-size: 0.95rem;
+  display: block;
+}
+
+.taxGroup {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+.badge {
+  display: inline-flex;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badgeSales {
+  background-color: #DBEAFE;
+  color: #1E40AF;
+}
+
+.badgePurchase {
+  background-color: #FEF3C7;
+  color: #B45309;
+}
+
+.badgeWht {
+  background-color: #FEE2E2;
+  color: #991B1B;
+}
+
+.rateText {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.coaText {
+  font-size: 0.85rem;
+  font-family: monospace;
+  background-color: var(--color-surface);
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+}
+
+.actionBtn {
+  background: transparent;
+  border: none;
+  color: var(--color-primary);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 6px 12px;
+}
+
+.actionBtn:hover {
+  text-decoration: underline;
+}

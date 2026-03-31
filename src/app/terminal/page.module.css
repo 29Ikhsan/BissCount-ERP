@@ -1,0 +1,113 @@
+.container {
+  padding: var(--space-6);
+  height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+}
+
+.terminalWrapper {
+  flex: 1;
+  background-color: #0F172A;
+  border-radius: var(--radius-lg);
+  border: 1px solid #1E293B;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+}
+
+.terminalHeader {
+  background-color: #1E293B;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #334155;
+}
+
+.dotContainer {
+  display: flex;
+  gap: 6px;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.dotRed { background-color: #FF5F56; }
+.dotYellow { background-color: #FFBD2E; }
+.dotGreen { background-color: #27C93F; }
+
+.terminalTitle {
+  color: #94A3B8;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex: 1;
+  text-align: center;
+}
+
+.outputArea {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  color: #E2E8F0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.line {
+  margin-bottom: 4px;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
+.promptLine {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 20px;
+  background-color: #1E293B80;
+  border-top: 1px solid #1E293B;
+}
+
+.promptSymbol {
+  color: #10B981;
+  font-weight: 800;
+}
+
+.input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #F8FAFC;
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.command { color: #3B82F6; font-weight: 700; }
+.success { color: #10B981; }
+.error { color: #EF4444; }
+.info { color: #8B5CF6; }
+.warning { color: #F59E0B; }
+.dim { color: #64748B; }
+
+/* Custom Scrollbar */
+.outputArea::-webkit-scrollbar {
+  width: 8px;
+}
+.outputArea::-webkit-scrollbar-track {
+  background: transparent;
+}
+.outputArea::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+.outputArea::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
