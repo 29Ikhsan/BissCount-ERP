@@ -7,7 +7,8 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { 
       type, role, name, email, phone, website, 
-      currency, paymentTerms, address, city, postalCode, country 
+      currency, paymentTerms, address, city, postalCode, country,
+      taxId, idType = "NPWP", idNumber, tkuId = "0000000000000000000000"
     } = body
 
     // Validation
@@ -22,7 +23,6 @@ export async function POST(req: Request) {
     }
 
     // Save Contact to Database
-    // @ts-ignore
     const newContact = await prisma.contact.create({
       data: {
         type: type || 'COMPANY',
@@ -37,6 +37,10 @@ export async function POST(req: Request) {
         city: city || null,
         postalCode: postalCode || null,
         country: country || null,
+        taxId: taxId || null,
+        idType,
+        idNumber: idNumber || null,
+        tkuId,
         tenantId: tenant.id
       }
     })
@@ -71,24 +75,44 @@ export async function GET() {
       orderBy: { name: 'asc' }
     })
 
-    // Compute balance (Invoices = Positive AR, Purchases = Negative AP)
+    // Mapping logic for UI display
     const contacts = contactsRaw.map((contact: any) => {
       const receivables = contact.invoices.reduce((sum: number, inv: any) => sum + inv.amount, 0)
       const payables = contact.purchaseOrders.reduce((sum: number, po: any) => sum + po.amount, 0)
       
       const balance = receivables - payables;
+      
+      // Determine display type and styling
+      let typeLabel = contact.role;
+      let color = '#3B82F6'; // Default Blue
+      let bg = '#DBEAFE';
+
+      if (contact.role === 'Vendor') {
+        color = '#F59E0B';
+        bg = '#FEF3C7';
+      } else if (contact.role === 'Both') {
+        typeLabel = 'Customer & Vendor';
+        color = '#8B5CF6'; // Purple
+        bg = '#F3E8FF';
+      } else if (contact.role === 'Employee') {
+        color = '#10B981'; // Green
+        bg = '#D1FAE5';
+      }
 
       return {
-        id: contact.id, // For UI row keys
-        code: contact.id.substring(0, 8).toUpperCase(), // e.g. CUST-UUID
+        id: contact.id,
+        code: contact.id.substring(0, 8).toUpperCase(),
         name: contact.name,
-        type: contact.role, // 'Customer', 'Vendor'
+        type: typeLabel,
+        role: contact.role,
         email: contact.email || '-',
         phone: contact.phone || '-',
         balance: balance,
-        creditLimit: contact.role === 'Customer' ? 100000 : 0, // Mock limit for now
-        color: contact.role === 'Customer' ? '#3B82F6' : '#F59E0B',
-        bg: contact.role === 'Customer' ? '#DBEAFE' : '#FEF3C7',
+        receivables,
+        payables,
+        creditLimit: contact.role === 'Customer' || contact.role === 'Both' ? 100000 : 0,
+        color,
+        bg,
       }
     })
 

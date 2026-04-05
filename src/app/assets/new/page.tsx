@@ -27,7 +27,17 @@ export default function NewAssetRegistration() {
     depreciationMethod: 'Straight Line',
     usefulLife: '',
     salvageValue: '0',
-    depreciationStartDate: ''
+    depreciationStartDate: '',
+    costCenterId: ''
+  });
+  const [costCenters, setCostCenters] = useState<any[]>([]);
+
+  useState(() => {
+    fetch('/api/cost-centers')
+      .then(res => res.json())
+      .then(data => {
+        if (data.costCenters) setCostCenters(data.costCenters);
+      });
   });
 
   const handleChange = (field: string, value: string) => {
@@ -105,6 +115,20 @@ export default function NewAssetRegistration() {
                 />
               </div>
 
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Cost Center / Project (Tagging)</label>
+                <select 
+                  className={styles.input}
+                  value={formData.costCenterId}
+                  onChange={(e) => handleChange('costCenterId', e.target.value)}
+                >
+                  <option value="">-- No Tag --</option>
+                  {costCenters.map(cc => (
+                    <option key={cc.id} value={cc.id}>{cc.code} - {cc.name}</option>
+                  ))}
+                </select>
+              </div>
+
             </div>
           </div>
         </div>
@@ -131,11 +155,11 @@ export default function NewAssetRegistration() {
               <div className={styles.formGroup}>
                 <label className={styles.label}>Original Purchase Cost (Capitalized) *</label>
                 <div className={styles.inputGroup}>
-                  <span className={styles.inputPrefix}>$</span>
+                  <span className={styles.inputPrefix}>Rp</span>
                   <input 
                     type="number" 
                     className={styles.inputWithPrefix} 
-                    placeholder="0.00"
+                    placeholder="0"
                     value={formData.purchaseCost}
                     onChange={(e) => handleChange('purchaseCost', e.target.value)}
                   />
@@ -193,11 +217,11 @@ export default function NewAssetRegistration() {
                 <div className={styles.formGroup}>
                   <label className={styles.label}>Salvage / Residual Value</label>
                   <div className={styles.inputGroup}>
-                    <span className={styles.inputPrefix}>$</span>
+                    <span className={styles.inputPrefix}>Rp</span>
                     <input 
                       type="number" 
                       className={styles.inputWithPrefix} 
-                      placeholder="0.00"
+                      placeholder="0"
                       value={formData.salvageValue}
                       onChange={(e) => handleChange('salvageValue', e.target.value)}
                     />

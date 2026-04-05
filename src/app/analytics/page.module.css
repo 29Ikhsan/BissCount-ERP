@@ -159,6 +159,18 @@
   flex-direction: column;
   gap: var(--space-4);
   margin-bottom: var(--space-4);
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.chatArea::-webkit-scrollbar {
+  width: 4px;
+}
+
+.chatArea::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.2);
+  border-radius: 2px;
 }
 
 .chatBubbleSystem {
@@ -170,6 +182,39 @@
   line-height: 1.5;
   color: var(--color-text-secondary);
   box-shadow: var(--shadow-sm);
+  align-self: flex-start;
+  max-width: 90%;
+}
+
+.chatBubbleUser {
+  background-color: var(--color-primary);
+  color: white;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md) var(--radius-md) 0 var(--radius-md);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  align-self: flex-end;
+  max-width: 80%;
+  box-shadow: var(--shadow-sm);
+}
+
+.chatBubbleSystem table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--space-2) 0;
+  font-size: 0.8rem;
+}
+
+.chatBubbleSystem th, .chatBubbleSystem td {
+  border: 1px solid var(--color-border);
+  padding: 6px 12px;
+  text-align: left;
+}
+
+.chatBubbleSystem th {
+  background-color: var(--color-surface-hover);
+  font-weight: 700;
+  color: var(--color-primary-dark);
 }
 
 .chatOptions {

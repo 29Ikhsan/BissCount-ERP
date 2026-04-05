@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ArrowRight, Lock, Mail, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Lock, Mail, ShieldCheck, BrainCircuit } from 'lucide-react';
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
 import styles from './page.module.css';
@@ -36,8 +36,8 @@ export default function Login() {
     <div className={styles.container}>
       <div className={styles.leftPanel}>
         <div className={styles.brand}>
-          <div className={styles.logo}><span>B</span></div>
-          <span className={styles.brandName}>Bizzcount</span>
+          <div className={styles.logo}><span>A</span></div>
+          <span className={styles.brandName}>AKSIA</span>
         </div>
         
         <div className={styles.heroContent}>
@@ -46,7 +46,7 @@ export default function Login() {
            
            <div className={styles.testimonialBox}>
               <div className={styles.stars}>★★★★★</div>
-              <p className={styles.quote}>"Since transitioning to Bizzcount, our month-end close time dropped from 8 days to just 2. The compliance checks and automated journaling are game changers."</p>
+              <p className={styles.quote}>"Since transitioning to AKSIA, our month-end close time dropped from 8 days to just 2. The compliance checks and automated journaling are game changers."</p>
               <div className={styles.author}>
                  <strong>Sarah Jenkins</strong>
                  <span>CFO, Global Tech Solutions</span>
@@ -61,6 +61,10 @@ export default function Login() {
 
       <div className={styles.rightPanel}>
         <div className={styles.loginBox}>
+          <div className={styles.aiHeader}>
+            <BrainCircuit className={styles.aiIcon} />
+            <h3 className={styles.aiTitle}>AKSIA Intelligence</h3>
+          </div>
           <div className={styles.loginHeader}>
             <h2 className={styles.loginTitle}>Welcome back</h2>
             <p className={styles.loginSubtitle}>Please enter your details to sign in.</p>

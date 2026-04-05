@@ -1,282 +1,283 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { 
-  Plus, 
-  FileText, 
-  Filter, 
-  ArrowUpDown,
-  Building2,
-  Wrench,
-  Cpu,
-  Server
-} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import styles from './page.module.css';
+import { 
+  Package, 
+  Plus, 
+  TrendingUp, 
+  AlertCircle, 
+  BarChart2, 
+  Search, 
+  Filter, 
+  MoreHorizontal,
+  X,
+  PlusCircle,
+  MinusCircle,
+  Layers,
+  Activity,
+  ShieldCheck,
+  CreditCard,
+  Warehouse
+} from 'lucide-react';
+import Link from 'next/link';
 
-// --- Dummy Data ---
-const inventoryItems = [
-  { id: 1, name: 'Precision Sensor X-1', sku: 'SKU-20948-AB', category: 'Electronics', stock: 420, maxStock: 500, status: 'Optimal', price: '$124.50', supplier: 'Global Core Tech', icon: Cpu, iconColor: '#0F3B8C', iconBg: '#E0E7FF' },
-  { id: 2, name: 'Titanium Alloy Housing', sku: 'SKU-11200-TI', category: 'Hardware', stock: 12, maxStock: 200, status: 'CRITICAL', price: '$2,400.00', supplier: 'Vulcan Metals Inc.', icon: Wrench, iconColor: '#EF4444', iconBg: '#FEE2E2' },
-  { id: 3, name: 'Industrial Hub 12-Port', sku: 'SKU-99081-NH', category: 'Networking', stock: 45, maxStock: 100, status: 'Warning', price: '$89.00', supplier: 'Network Solutions Corp.', icon: Server, iconColor: '#F59E0B', iconBg: '#FEF3C7' },
-  { id: 4, name: 'Fiber Optic Cable 10m', sku: 'SKU-33451-FO', category: 'Infrastructure', stock: 920, maxStock: 1000, status: 'Surplus', price: '$42.75', supplier: 'Global Core Tech', icon: Building2, iconColor: '#10B981', iconBg: '#D1FAE5' },
-];
+export default function InventoryHub() {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  
+  // Modal States
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newProduct, setNewProduct] = useState({
+    sku: '',
+    name: '',
+    category: 'RAW_MATERIAL',
+    price: 0,
+    cost: 0
+  });
 
-const topSuppliers = [
-  { id: 'S1', name: 'Global Core Tech', type: 'Premium Partner', icon: Building2 },
-  { id: 'S2', name: 'Vulcan Metals Inc.', type: 'A-Grade Supply', icon: Wrench },
-];
-
-export default function Inventory() {
-  const router = useRouter();
-  const [items, setItems] = useState<any[]>([]);
+  const fetchData = () => {
+    setLoading(true);
+    fetch('/api/inventory')
+      .then(res => res.json())
+      .then(d => {
+        setData(d);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  };
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const res = await fetch('/api/inventory');
-        const data = await res.json();
-        if (data.products && data.products.length > 0) {
-          const mapped = data.products.map((prod: any) => {
-            const totalQty = prod.inventoryLevels?.reduce((sum: number, lvl: any) => sum + lvl.quantity, 0) || 0;
-            return {
-              id: prod.id,
-              name: prod.name,
-              sku: prod.sku || 'N/A',
-              category: prod.category || 'Product',
-              stock: totalQty,
-              maxStock: Math.max(500, totalQty * 2),
-              status: totalQty > 20 ? 'Optimal' : totalQty > 0 ? 'Warning' : 'CRITICAL',
-              price: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(prod.price || 0),
-              supplier: 'Internal DB',
-              icon: Cpu,
-              iconColor: totalQty > 20 ? '#0F3B8C' : '#EF4444',
-              iconBg: totalQty > 20 ? '#E0E7FF' : '#FEE2E2'
-            };
-          });
-          setItems(mapped);
-        }
-      } catch (err) {
-        console.error('Fetch inventory failed', err);
-      }
-    };
-    fetchProducts();
+    fetchData();
   }, []);
 
-  const handleAdjustStock = (id: string, currentStock: number, name: string) => {
-    const inputStr = window.prompt(`Enter NEW absolute stock level for ${name}:`, currentStock.toString());
-    if (inputStr === null || inputStr === "") return;
-    
-    const newStock = parseInt(inputStr.replace(/[^0-9-]/g, ""), 10);
-    if (isNaN(newStock) || newStock < 0) {
-      alert("Invalid stock amount entered.");
-      return;
-    }
-
-    setItems(items.map(item => {
-      if (item.id === id) {
-        let newStatus = 'Optimal';
-        if (newStock < 20) newStatus = 'CRITICAL';
-        else if (newStock < 50) newStatus = 'Warning';
-        else if (newStock > item.maxStock * 0.8) newStatus = 'Surplus';
-        return { ...item, stock: newStock, status: newStatus };
+  const handleCreateProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/inventory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newProduct)
+      });
+      if (res.ok) {
+        setIsModalOpen(false);
+        setNewProduct({ sku: '', name: '', category: 'RAW_MATERIAL', price: 0, cost: 0 });
+        fetchData();
       }
-      return item;
-    }));
+    } catch (error) {
+      console.error('Product creation failed');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  const filteredProducts = data?.products?.filter((p: any) => 
+    p.name.toLowerCase().includes(search.toLowerCase()) || 
+    p.sku.toLowerCase().includes(search.toLowerCase())
+  ) || [];
+
+  if (loading) return (
+    <div className={styles.loadingContainer}>
+      <div className={styles.loader}></div>
+      <p>Synchronizing AKSIA Physical Assets...</p>
+    </div>
+  );
 
   return (
     <div className={styles.container}>
       {/* Header */}
       <div className={styles.header}>
-        <div>
-          <h1 className={styles.pageTitle}>Inventory Overview</h1>
-          <p className={styles.pageSubtitle}>Centralized stock monitoring and supply chain management.</p>
+        <div className={styles.headerLeft}>
+          <div className={styles.iconBox} style={{ backgroundColor: 'rgba(39, 156, 90, 0.1)' }}>
+            <Package size={24} color="#279C5A"/>
+          </div>
+          <div className={styles.headerTitleGroup}>
+            <h1 className={styles.title}>Inventory Command</h1>
+            <p className={styles.subtitle}>Institutional multi-warehouse stock management and physical asset tracking.</p>
+          </div>
         </div>
-        
         <div className={styles.headerActions}>
-          <button className={styles.reportBtn}>
-            <FileText size={16} /> Generate Stock Report
-          </button>
-          <button className={styles.addBtn} onClick={() => router.push('/inventory/new')}>
-            <Plus size={16} /> Add New Item
-          </button>
+           <div className={styles.searchBox}>
+              <Search size={16} className={styles.searchIcon}/>
+              <input 
+                type="text" 
+                placeholder="Search SKU or Product..." 
+                className={styles.searchInput}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+           </div>
+           <button className={styles.btnPrimary} onClick={() => setIsModalOpen(true)}>
+             <Plus size={16}/> New Product
+           </button>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className={styles.kpiGrid}>
-        <div className={styles.kpiCardBlue}>
-          <div className={styles.kpiLabel}>TOTAL STOCK VALUE</div>
-          <div className={styles.kpiValue}>$1,284,590.00</div>
-          <div className={styles.kpiTrend}>
-            +4.2% from last month
-          </div>
+      {/* Metrics Grid */}
+      <div className={styles.metricsGrid}>
+        <div className={styles.metricCard}>
+           <div className={styles.metricLabel}>Total Inventory Value</div>
+           <div className={styles.metricValue}>Rp {(data?.stats.totalValue || 0).toLocaleString()}</div>
+           <div className={styles.metricSub}>ASSET VALUATION</div>
         </div>
-        <div className={styles.kpiCardRed}>
-          <div className={styles.kpiLabel}>LOW STOCK ITEMS</div>
-          <div className={styles.kpiValueMain}>12</div>
-          <div className={styles.kpiAction}>
-             Action required immediately
-          </div>
+        <div className={styles.metricCard}>
+           <div className={styles.metricLabel}>Low Stock Alerts</div>
+           <div className={styles.metricValue} style={{ color: '#92400E' }}>{data?.stats.lowStockAlerts || 0} SKUs</div>
+           <div className={styles.metricSub}>THRESHOLD TRIGGERS</div>
         </div>
-        <div className={styles.kpiCardLightBlue}>
-          <div className={styles.kpiLabel}>PENDING PURCHASE ORDERS</div>
-          <div className={styles.kpiValueMain}>28</div>
-          <div className={styles.kpiActionBlue}>
-             8 arriving this week
-          </div>
+        <div className={styles.metricCard}>
+           <div className={styles.metricLabel}>Out of Stock</div>
+           <div className={styles.metricValue} style={{ color: '#991B1B' }}>{data?.stats.outOfStock || 0} SKUs</div>
+           <div className={styles.metricSub}>ZERO QUANTITY</div>
+        </div>
+        <div className={styles.metricCard}>
+           <div className={styles.metricLabel}>Total SKUs</div>
+           <div className={styles.metricValue}>{data?.stats.totalSKUs || 0} Products</div>
+           <div className={styles.metricSub}>UNIQUE CATALOGUE</div>
         </div>
       </div>
 
-      <div className={styles.mainLayout}>
-        <div className={styles.tableSection}>
-          <div className={styles.tableControls}>
-            <div className={styles.filterGroup}>
-              <button className={styles.filterBtn}><Filter size={14}/> Filter</button>
-              <button className={styles.filterBtn}><ArrowUpDown size={14}/> Sort By: Level</button>
-            </div>
-            <div className={styles.showingText}>Showing 15 of 248 items</div>
-          </div>
-          
-          <table className={styles.inventoryTable}>
-            <thead>
-              <tr>
-                <th>ITEM NAME & SKU</th>
-                <th>CATEGORY</th>
-                <th>STOCK LEVEL</th>
-                <th>UNIT PRICE</th>
-                <th>SUPPLIER</th>
-                <th style={{ textAlign: 'right' }}>ACTIONS</th>
+      {/* Product List */}
+      <div className={styles.inventoryList}>
+        <div className={styles.tableHeader}>
+           <div className={styles.tableTitleGroup}>
+              <h2 className={styles.tableTitle}>Stock Realization</h2>
+              <span className={styles.liveIndicator}>LIVE TRACKING</span>
+           </div>
+           <div className={styles.integratedBagde}><Activity size={14}/> Integrated with Operations</div>
+        </div>
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th>PRODUCT & SKU</th>
+              <th>CATEGORY</th>
+              <th>WAREHOUSE STATUS</th>
+              <th>QUANTITY</th>
+              <th>VALUATION (IDR)</th>
+              <th>ACCOUNTING STATUS</th>
+              <th className={styles.textRight}>ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredProducts.map((p: any) => (
+              <tr key={p.id}>
+                <td>
+                  <span className={styles.sku}>{p.sku}</span>
+                  <span className={styles.productName}>{p.name}</span>
+                </td>
+                <td>{p.category}</td>
+                <td>
+                  {p.inventoryLevels?.length > 0 ? (
+                    p.inventoryLevels.map((l: any) => (
+                      <div key={l.id} className={styles.warehouseLevel}>
+                        <Warehouse size={12}/> {l.warehouse.name}: {l.quantity}
+                      </div>
+                    ))
+                  ) : <span className={styles.noStock}>No registered stock.</span>}
+                </td>
+                <td><span className={styles.totalQty}>{p.totalQuantity} Units</span></td>
+                <td>Rp {(p.totalQuantity * p.cost).toLocaleString()}</td>
+                <td>
+                  <span className={`${styles.statusBadge} ${styles[p.status.toLowerCase().replace(/_/g, '')] || ''}`}>
+                    {p.status}
+                  </span>
+                </td>
+                <td className={styles.textRight}>
+                   <div className={styles.actions}>
+                      <button className={styles.adjustBtn} title="Quick Adjust"><Activity size={16}/></button>
+                      <button className={styles.moreBtn}><MoreHorizontal size={16}/></button>
+                   </div>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <tr key={item.id}>
-                  <td>
-                    <div className={styles.itemInfo}>
-                      <div className={styles.itemIcon} style={{backgroundColor: item.iconBg, color: item.iconColor}}>
-                        <item.icon size={18} />
-                      </div>
-                      <div>
-                        <div className={styles.itemName}>{item.name}</div>
-                        <div className={styles.itemSku}>{item.sku}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <span className={styles.categoryBadge}>{item.category}</span>
-                  </td>
-                  <td>
-                    <div className={styles.stockInfo}>
-                      <div className={styles.stockLabelRow}>
-                        <span className={styles.stockNumbers}>{item.stock}/{item.maxStock}</span>
-                        <span className={`${styles.stockStatus} ${styles[item.status]}`}>{item.status}</span>
-                      </div>
-                      <div className={styles.stockBarBg}>
-                        <div 
-                          className={`${styles.stockBarFill} ${styles[item.status + 'Bg']}`} 
-                          style={{width: `${(item.stock / item.maxStock) * 100}%`}}
-                        ></div>
-                      </div>
-                    </div>
-                  </td>
-                  <td><div className={styles.itemPrice}>{item.price}</div></td>
-                  <td>
-                    <div className={styles.supplierName}>{item.supplier}</div>
-                  </td>
-                  <td style={{ textAlign: 'right', verticalAlign: 'middle' }}>
-                    <button 
-                      style={{ background: 'white', color: '#3B82F6', border: '1px solid #BFDBFE', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '0.75rem', transition: 'all 0.2s' }}
-                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}
-                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
-                      onClick={() => handleAdjustStock(item.id, item.stock, item.name)}
-                    >
-                      Adjust Stock
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {items.length === 0 && (
-                <tr>
-                   <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>
-                      No inventory items found. Add products to start tracking warehouse levels.
-                   </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-          <div className={styles.loadMoreContainer}>
-             <button className={styles.loadMoreBtn}>Load More Items</button>
-          </div>
-        </div>
-
-        <div className={styles.sideSection}>
-          <div className={styles.sideCard}>
-            <h3 className={styles.sideTitle}>TOP SUPPLIERS</h3>
-            <div className={styles.supplierList}>
-              {topSuppliers.map((supplier) => (
-                <div key={supplier.id} className={styles.supplierItem}>
-                  <div className={styles.supplierIconBox}>
-                    <supplier.icon size={16} />
-                  </div>
-                  <div>
-                    <div className={styles.supplierNameLabel}>{supplier.name}</div>
-                    <div className={styles.supplierTypeLabel}>{supplier.type}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className={styles.sideCard}>
-             <h3 className={styles.sideTitle}>RECENT ADJUSTMENTS</h3>
-             <div className={styles.timeline}>
-               <div className={styles.timelineItem}>
-                 <div className={styles.timelineDot}></div>
-                 <div className={styles.timelineContent}>
-                   <div className={styles.timelineHeader}>
-                     <span className={styles.timelineAction}>Stock-In: 500 Units</span>
-                     <span className={styles.timelineTime}>2h ago</span>
-                   </div>
-                   <div className={styles.timelineDesc}>Precision Sensor X-1 arrived from Global Core Tech.</div>
-                 </div>
-               </div>
-               
-               <div className={styles.timelineItem}>
-                 <div className={styles.timelineDot}></div>
-                 <div className={styles.timelineContent}>
-                   <div className={styles.timelineHeader}>
-                     <span className={styles.timelineAction}>Adjustment: -12 Units</span>
-                     <span className={styles.timelineTime}>5h ago</span>
-                   </div>
-                   <div className={styles.timelineDesc}>Damaged goods reported during manual warehouse audit.</div>
-                 </div>
-               </div>
-
-               <div className={styles.timelineItem}>
-                 <div className={styles.timelineDot}></div>
-                 <div className={styles.timelineContent}>
-                   <div className={styles.timelineHeader}>
-                     <span className={styles.timelineAction}>Internal Transfer</span>
-                     <span className={styles.timelineTime}>Yesterday</span>
-                   </div>
-                   <div className={styles.timelineDesc}>100 units moved from Main to East-Wing Hub.</div>
-                 </div>
-               </div>
-             </div>
-          </div>
-
-          <div className={styles.optimizeCard}>
-            <div className={styles.optimizeOverlay}></div>
-            <div className={styles.optimizeContent}>
-              <h3 className={styles.optimizeTitle}>Optimize Your Space</h3>
-              <p className={styles.optimizeDesc}>Learn about our new AI-driven slotting optimization module.</p>
-              <button className={styles.optimizeBtn}>View Details</button>
-            </div>
-          </div>
-        </div>
+            ))}
+          </tbody>
+        </table>
       </div>
+
+      {/* NEW PRODUCT MODAL */}
+      {isModalOpen && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeader}>
+               <h2 className={styles.modalTitle}>Register Strategic Asset</h2>
+               <button className={styles.closeBtn} onClick={() => setIsModalOpen(false)}>
+                 <X size={20} />
+               </button>
+            </div>
+            <form onSubmit={handleCreateProduct}>
+               <div className={styles.modalBody}>
+                  <div className={styles.formGrid}>
+                    <div className={styles.formGroup}>
+                       <label className={styles.label}>Product SKU</label>
+                       <input 
+                         type="text" 
+                         className={styles.input}
+                         required
+                         placeholder="SKU-001"
+                         value={newProduct.sku}
+                         onChange={(e) => setNewProduct({...newProduct, sku: e.target.value})}
+                       />
+                    </div>
+                    <div className={styles.formGroup}>
+                       <label className={styles.label}>Product Name</label>
+                       <input 
+                         type="text" 
+                         className={styles.input}
+                         required
+                         placeholder="Emerald Widget"
+                         value={newProduct.name}
+                         onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
+                       />
+                    </div>
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Category</label>
+                    <select 
+                      className={styles.select}
+                      value={newProduct.category}
+                      onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
+                    >
+                      <option value="RAW_MATERIAL">Raw Material</option>
+                      <option value="FINISHED_GOOD">Finished Good</option>
+                      <option value="MERCHANDISE">Merchandise</option>
+                      <option value="PACKAGING">Packaging</option>
+                    </select>
+                  </div>
+
+                  <div className={styles.formGrid}>
+                    <div className={styles.formGroup}>
+                       <label className={styles.label}>Unit Cost (IDR)</label>
+                       <input 
+                         type="number" 
+                         className={styles.input}
+                         value={newProduct.cost}
+                         onChange={(e) => setNewProduct({...newProduct, cost: Number(e.target.value)})}
+                       />
+                    </div>
+                    <div className={styles.formGroup}>
+                       <label className={styles.label}>Selling Price (IDR)</label>
+                       <input 
+                         type="number" 
+                         className={styles.input}
+                         value={newProduct.price}
+                         onChange={(e) => setNewProduct({...newProduct, price: Number(e.target.value)})}
+                       />
+                    </div>
+                  </div>
+               </div>
+               <div className={styles.modalFooter}>
+                  <button type="submit" className={styles.btnPrimary} style={{ width: '100%' }}>
+                     {isSubmitting ? 'Registering...' : 'Add to Catalogue'}
+                  </button>
+               </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

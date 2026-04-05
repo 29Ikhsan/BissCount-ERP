@@ -3,13 +3,36 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(req: Request) {
   try {
+    const { searchParams } = new URL(req.url)
+    const costCenterId = searchParams.get('costCenterId')
+    const startDate = searchParams.get('startDate')
+    const endDate = searchParams.get('endDate')
+
     const tenant = await prisma.tenant.findFirst()
     if (!tenant) return NextResponse.json({ error: 'No Tenant' }, { status: 500 })
+
+    const whereClause: any = { tenantId: tenant.id }
+    const journalLineFilter: any = {}
+
+    if (costCenterId && costCenterId !== 'all') {
+      journalLineFilter.journalEntry = { costCenterId: costCenterId }
+    }
+
+    if (startDate && endDate) {
+      journalLineFilter.journalEntry = {
+        ...(journalLineFilter.journalEntry || {}),
+        date: {
+          gte: new Date(startDate),
+          lte: new Date(endDate)
+        }
+      }
+    }
 
     const accounts = await prisma.account.findMany({
       where: { tenantId: tenant.id },
       include: {
         journalLines: {
+          where: journalLineFilter,
           include: { journalEntry: true }
         }
       },

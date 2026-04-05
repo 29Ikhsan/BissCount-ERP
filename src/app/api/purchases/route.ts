@@ -1,53 +1,139 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { ensurePeriodOpen } from '@/lib/periodGuard'
+import { postToLedger, findAccountByCode } from '@/lib/ledgerUtility'
+import { recordStockIn } from '@/lib/inventoryValuation'
+import { recordAudit } from '@/lib/audit'
 
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { supplier, contactId, date, expectedDate, amount } = body
+    const { supplier, contactId, costCenterId, date, expectedDate, items, discountAmount = 0, type = 'PURCHASE_ORDER' } = body
 
-    if (!supplier || !date || typeof amount === 'undefined') {
+    if (!supplier || !date || !items || !Array.isArray(items)) {
       return NextResponse.json({ error: 'Missing required PO configuration fields.' }, { status: 400 })
     }
 
-    // Workaround: Get default Tenant
     const tenant = await prisma.tenant.findFirst()
-    if (!tenant) {
-      return NextResponse.json({ error: 'System Error: No Master Tenant Found' }, { status: 500 })
-    }
+    if (!tenant) return NextResponse.json({ error: 'No Tenant' }, { status: 500 })
 
-    // Auto generate PO Number
+    // 1. Check Period Lock
+    await ensurePeriodOpen(new Date(date), tenant.id)
+
     const count = await prisma.purchaseOrder.count({ where: { tenantId: tenant.id } })
     const poNumber = `PO-${new Date().toISOString().slice(0, 4)}-${String(count + 1).padStart(3, '0')}`
 
-    const purchaseOrder = await prisma.purchaseOrder.create({
-      data: {
-        poNumber,
-        supplier,
-        date: new Date(date),
-        expectedDate: expectedDate ? new Date(expectedDate) : null,
-        ...(contactId ? { contactId } : {}),
-        // @ts-ignore - Prisma types catch up later
-        amount: parseFloat(amount) || 0,
-        status: 'PENDING',
-        tenantId: tenant.id
+    const newPO = await prisma.$transaction(async (tx) => {
+      let subtotal = 0
+      let totalTax = 0
+
+      const poItems = items.map((item: any) => {
+        const itemSubtotal = (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)
+        const itemTax = itemSubtotal * ((Number(item.taxRate) || 0) / 100)
+        
+        subtotal += itemSubtotal
+        totalTax += itemTax
+
+        return {
+          description: item.description,
+          quantity: Number(item.quantity) || 0,
+          unitPrice: Number(item.unitPrice) || 0,
+          taxId: item.taxId || null,
+          taxRate: Number(item.taxRate) || 0,
+          taxAmount: itemTax,
+          total: itemSubtotal,
+          productId: item.productId || null
+        }
+      })
+
+      const grandTotal = subtotal + totalTax - (Number(discountAmount) || 0)
+
+      const purchaseOrder = await tx.purchaseOrder.create({
+        data: {
+          poNumber,
+          supplier,
+          date: new Date(date),
+          expectedDate: expectedDate ? new Date(expectedDate) : null,
+          amount: subtotal,
+          taxAmount: totalTax,
+          discountAmount: Number(discountAmount) || 0,
+          grandTotal: grandTotal,
+          status: 'PENDING',
+          type,
+          tenantId: tenant.id,
+          contactId: contactId || null,
+          costCenterId: costCenterId || null,
+          items: { create: poItems }
+        },
+        include: { items: true }
+      })
+
+      // 2. Automated Ledger Posting & Stock-In (Only for Goods Receipt/Bill)
+      if (type === 'GOODS_RECEIPT' || type === 'VENDOR_BILL') {
+        const accAP = await findAccountByCode(tenant.id, '2001', tx)
+        const accInv = await findAccountByCode(tenant.id, '1004', tx)
+        const accTax = await findAccountByCode(tenant.id, '2002', tx)
+
+        if (accAP && accInv) {
+          // Ensure Journal Entry balances
+          const taxDebit = (totalTax > 0 && accTax) ? totalTax : 0
+          const apCredit = subtotal + taxDebit
+
+          await postToLedger(tx, {
+            date: new Date(date),
+            description: `Automatic Journal: ${type} ${poNumber} from ${supplier}`,
+            reference: poNumber,
+            tenantId: tenant.id,
+            lines: [
+              { accountId: accInv.id, debit: subtotal, credit: 0 },
+              { accountId: accAP.id, debit: 0, credit: apCredit },
+              ...(taxDebit > 0 && accTax ? [{ accountId: accTax.id, debit: taxDebit, credit: 0 }] : [])
+            ]
+          })
+        }
+
+        // 3. Update Inventory Stock (Receipt) & Valuation
+        const warehouse = await tx.warehouse.findFirst({ where: { tenantId: tenant.id } });
+        if (warehouse) {
+          for (const item of items) {
+            if (item.productId) {
+              await recordStockIn(tx, {
+                productId: item.productId,
+                warehouseId: warehouse.id,
+                quantity: Number(item.quantity) || 0,
+                unitCost: Number(item.unitPrice) || 0,
+                tenantId: tenant.id
+              });
+            }
+          }
+        }
       }
+
+      return purchaseOrder
     })
 
-    return NextResponse.json({ success: true, purchaseOrder }, { status: 201 })
-  } catch (error) {
+    // 4. Record Audit Log
+    await recordAudit('CREATE', 'Purchase', newPO.id, tenant.id, undefined, { poNumber: newPO.poNumber, amount: newPO.grandTotal, supplier: newPO.supplier })
+
+    return NextResponse.json({ success: true, purchaseOrder: newPO }, { status: 201 })
+  } catch (error: any) {
     console.error('[Create PO Error]:', error)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 })
   }
 }
 
-export async function GET(req: Request) {
+export async function GET() {
   try {
     const tenant = await prisma.tenant.findFirst()
     if (!tenant) return NextResponse.json({ error: 'No Tenant' }, { status: 500 })
 
     const purchaseOrders = await prisma.purchaseOrder.findMany({
       where: { tenantId: tenant.id },
+      include: { 
+        items: { include: { product: true, tax: true } },
+        contact: true,
+        costCenter: true
+      },
       orderBy: { date: 'desc' },
       take: 100
     })

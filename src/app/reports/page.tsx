@@ -7,6 +7,7 @@ import {
 } from 'recharts';
 import { Download, Sparkles, FileText, ArrowUpRight, ArrowDownRight, Calendar, GitCompare, Filter, Eye, Edit3, X } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { useLanguage } from '@/context/LanguageContext';
 import styles from './page.module.css';
 
 // --- Dummy Data ---
@@ -85,6 +86,7 @@ const getCfData = (periodType: string, compareWith: string) => [
 ];
 
 export default function Dashboard() {
+  const { t, formatCurrency, locale } = useLanguage();
   const [periodType, setPeriodType] = useState('monthly');
   const [compareWith, setCompareWith] = useState('prev_year');
   const [reportType, setReportType] = useState('pl');
@@ -96,23 +98,38 @@ export default function Dashboard() {
   const [activeViewType, setActiveViewType] = useState<string>('');
   const [activeEditRow, setActiveEditRow] = useState<any | null>(null);
   const [drilldownCoa, setDrilldownCoa] = useState<string | null>(null);
+  const [selectedCoa, setSelectedCoa] = useState<string>('all');
 
   const [apiReports, setApiReports] = useState<any>(null);
+  const [costCenters, setCostCenters] = useState<any[]>([]);
+  const [selectedCostCenter, setSelectedCostCenter] = useState('all');
   const [kpis, setKpis] = useState<any>({ revenue: 0, profitMargin: '0%', opex: 0 });
 
-  useEffect(() => {
-    const fetchReports = async () => {
-      try {
-        const res = await fetch('/api/reports')
-        const data = await res.json()
-        if (data.reports) setApiReports(data.reports)
-        if (data.kpis) setKpis(data.kpis)
-      } catch (err) {
-        console.error('Failed to fetch API Financial Reports', err)
-      }
+  const fetchReports = async () => {
+    try {
+      const params = new URLSearchParams({
+        costCenterId: selectedCostCenter,
+        startDate,
+        endDate
+      });
+      const [repRes, ccRes] = await Promise.all([
+        fetch(`/api/reports?${params.toString()}`),
+        fetch('/api/cost-centers')
+      ]);
+      const data = await repRes.json();
+      const ccData = await ccRes.json();
+      
+      if (data.reports) setApiReports(data.reports);
+      if (data.kpis) setKpis(data.kpis);
+      if (ccData.costCenters) setCostCenters(ccData.costCenters);
+    } catch (err) {
+      console.error('Failed to fetch API Financial Reports', err);
     }
-    fetchReports()
-  }, [])
+  };
+
+  useEffect(() => {
+    fetchReports();
+  }, [selectedCostCenter, startDate, endDate]);
 
   const getDrilldownData = (coa: string) => {
     if (!apiReports) return []
@@ -133,29 +150,50 @@ export default function Dashboard() {
       alert("Loading reports, please wait...")
       return
     }
+    
+    let baseData: any[] = [];
     switch(reportType) {
-      case 'gl': setViewData(apiReports.gl); break;
-      case 'tb': setViewData(apiReports.tb); break;
-      case 'pl': setViewData(apiReports.pl); break;
-      case 'bs': setViewData(apiReports.bs); break;
-      case 'cf': setViewData(apiReports.cf); break;
-      default: setViewData(null);
+      case 'gl': baseData = apiReports.gl; break;
+      case 'tb': baseData = apiReports.tb; break;
+      case 'pl': baseData = apiReports.pl; break;
+      case 'bs': baseData = apiReports.bs; break;
+      case 'cf': baseData = apiReports.cf; break;
     }
+
+    if (reportType === 'gl' && selectedCoa !== 'all') {
+       baseData = baseData.filter((item: any) => item.Code === selectedCoa);
+    }
+
+    setViewData(baseData);
   };
 
-  const getFileName = (base: string) => `Bizzcount_${base}_${periodType}_vs_${compareWith}.xlsx`;
+  const getFileName = (base: string) => `Bizzcount_${base}_${new Date().toISOString().split('T')[0]}.xlsx`;
 
   const downloadReport = () => {
+    if (!apiReports) {
+      alert("Reports not loaded yet.");
+      return;
+    }
+    
     let rawData: any[] = [];
     let name = '';
     switch(reportType) {
-      case 'gl': rawData = getGlData(); name = "General_Ledger"; break;
-      case 'tb': rawData = getTbData(); name = "Trial_Balance"; break;
-      case 'pl': rawData = getPlData(periodType, compareWith); name = "Profit_And_Loss"; break;
-      case 'bs': rawData = getBsData(periodType, compareWith); name = "Balance_Sheet"; break;
-      case 'cf': rawData = getCfData(periodType, compareWith); name = "Cash_Flow"; break;
+      case 'gl': rawData = apiReports.gl; name = "General_Ledger"; break;
+      case 'tb': rawData = apiReports.tb; name = "Trial_Balance"; break;
+      case 'pl': rawData = apiReports.pl; name = "Profit_And_Loss"; break;
+      case 'bs': rawData = apiReports.bs; name = "Balance_Sheet"; break;
+      case 'cf': rawData = apiReports.cf; name = "Cash_Flow"; break;
     }
     
+    if (reportType === 'gl' && selectedCoa !== 'all') {
+       rawData = rawData.filter((item: any) => item.Code === selectedCoa);
+    }
+
+    if (!rawData || rawData.length === 0) {
+      alert("No data available for this report and filter.");
+      return;
+    }
+
     // Strip "id" before exporting
     const cleanData = rawData.map(({id, ...rest}) => rest);
     const ws = XLSX.utils.json_to_sheet(cleanData);
@@ -164,10 +202,6 @@ export default function Dashboard() {
     XLSX.writeFile(wb, getFileName(name));
   };
 
-  const formatCurrency = (val: number | string) => {
-    if (typeof val !== 'number') return val;
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
-  };
 
   const startEdit = (row: any) => {
     setActiveEditRow(row);
@@ -178,9 +212,9 @@ export default function Dashboard() {
       {/* Header */}
       <div className={styles.header}>
         <div>
-          <div className={styles.breadcrumbs}>ANALYTICS &gt; <span className={styles.activeBreadcrumb}>REPORTS</span></div>
-          <h1 className={styles.pageTitle}>Financial Reports Builder</h1>
-          <p className={styles.pageSubtitle}>Generate standard compliance reports and configure period-over-period variance analysis.</p>
+          <div className={styles.breadcrumbs}>{t('Analytics').toUpperCase()} &gt; <span className={styles.activeBreadcrumb}>{t('Reports').toUpperCase()}</span></div>
+          <h1 className={styles.pageTitle}>{t('FinancialReports')}</h1>
+          <p className={styles.pageSubtitle}>{t('ReportSubtitle')}</p>
         </div>
       </div>
 
@@ -245,6 +279,20 @@ export default function Dashboard() {
            </div>
 
            <div className={styles.controlGroup}>
+             <label className={styles.controlLabel}><Filter size={14} /> DIMENSIONAL TAGGING</label>
+             <select 
+               className={styles.customSelect} 
+               value={selectedCostCenter} 
+               onChange={(e) => setSelectedCostCenter(e.target.value)}
+             >
+               <option value="all">Consolidated (All Branches/Projects)</option>
+               {costCenters.map(cc => (
+                 <option key={cc.id} value={cc.id}>{cc.code} - {cc.name}</option>
+               ))}
+             </select>
+           </div>
+
+           <div className={styles.controlGroup}>
              <label className={styles.controlLabel}><Filter size={14} /> STATEMENT SELECTION</label>
              <div className={styles.actionRowFull}>
                <select 
@@ -259,6 +307,21 @@ export default function Dashboard() {
                  <option value="bs">Balance Sheet</option>
                  <option value="cf">Cash Flow (Indirect)</option>
                </select>
+
+               {reportType === 'gl' && apiReports?.gl && (
+                 <select 
+                   className={styles.customSelect}
+                   value={selectedCoa}
+                   onChange={(e) => setSelectedCoa(e.target.value)}
+                   style={{ flex: 0.5, backgroundColor: '#f0fdf4', borderColor: '#279C5A' }}
+                 >
+                   <option value="all">All Accounts (Full GL)</option>
+                   {Array.from(new Set(apiReports.gl.map((item: any) => `${item.Code} - ${item.Account}`))).map((accStr: any) => (
+                     <option key={accStr} value={accStr.split(' - ')[0]}>{accStr}</option>
+                   ))}
+                 </select>
+               )}
+
                <button className={styles.btnOutline} onClick={handleViewReport}>
                  <Eye size={16} /> View
                </button>

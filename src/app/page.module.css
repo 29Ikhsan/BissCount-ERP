@@ -25,6 +25,71 @@
   padding-top: 6px;
 }
 
+/* Quick Access Launchpad */
+.quickAccessGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-6);
+  margin: var(--space-4) 0 var(--space-8);
+}
+
+.actionCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  background: white;
+  padding: var(--space-5);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: left;
+  width: 100%;
+  box-shadow: var(--shadow-sm);
+}
+
+.actionCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border-color: var(--primary);
+}
+
+.actionIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.bgEmerald { background: var(--primary); box-shadow: 0 4px 12px rgba(39, 156, 90, 0.3); }
+.bgGray { background: #475569; box-shadow: 0 4px 12px rgba(71, 85, 105, 0.3); }
+.bgBlue { background: #3B82F6; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
+.bgTARA { background: linear-gradient(135deg, #279C5A 0%, #10B981 100%); box-shadow: 0 4px 12px rgba(39, 156, 90, 0.3); }
+
+.actionText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.actionTitle {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text-main);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: -0.01em;
+}
+
+.actionDesc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
 .headerActions {
   display: flex;
   align-items: center;
@@ -134,7 +199,7 @@
 }
 
 .kpiCardNetProfit {
-  background-color: var(--color-primary-dark); /* Deeper blue for net profit */
+  background-color: var(--primary); /* Emerald Green for net profit */
   color: white;
 }
 

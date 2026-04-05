@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   ArrowLeft,
@@ -12,37 +12,88 @@ import {
   Trash2,
   CalendarDays,
   Store,
-  Wallet
+  Wallet,
+  Search,
+  BookOpen
 } from 'lucide-react';
 import styles from './page.module.css';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function NewExpenseForm() {
   const router = useRouter();
+  const { formatCurrency } = useLanguage();
   
   const [formData, setFormData] = useState({
     merchant: '',
+    contactId: '',
     date: '',
     reference: '',
     paymentMethod: 'Corporate Card',
-    currency: 'USD',
+    currency: 'IDR',
   });
 
-  const [items, setItems] = useState([
-    { id: 1, category: 'IT Infrastructure', costCenter: '', description: '', amount: 0, taxRate: 0, whtRate: 0 }
+  const [items, setItems] = useState<any[]>([
+    { 
+      id: 1, accountId: '', categoryName: '', description: '', amount: 0, 
+      taxId: '', taxRate: 0, whtId: '', whtRate: 0,
+      taxObjectCode: '', tkuId: '0000000000000000000000', workerStatus: 'Resident',
+      ptkpStatus: 'TK/0', passportNo: '', facilityCap: 'N/A'
+    }
   ]);
 
   const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [costCenters, setCostCenters] = useState<any[]>([]);
+  const [contacts, setContacts] = useState<any[]>([]);
+  const [masterData, setMasterData] = useState({ accounts: [] as any[], taxes: [] as any[] });
+
+  const taxObjectCodes = [
+    { code: '24-101-01', name: 'Dividen' },
+    { code: '24-104-05', name: 'Jasa Aktuaris' },
+    { code: '24-104-19', name: 'Jasa Profesional / Tenaga Ahli' },
+    { code: '24-104-20', name: 'Jasa Teknik / Manajemen' },
+    { code: '28-409-01', name: 'Sewa Tanah/Bangunan' }
+  ];
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [ccRes, accRes, taxRes, conRes] = await Promise.all([
+          fetch('/api/cost-centers'),
+          fetch('/api/accounts'),
+          fetch('/api/taxes'),
+          fetch('/api/contacts')
+        ]);
+        const ccData = await ccRes.json();
+        const accData = await accRes.json();
+        const taxData = await taxRes.json();
+        const conData = await conRes.json();
+
+        if (ccData.costCenters) setCostCenters(ccData.costCenters);
+        if (accData.accounts) setMasterData(prev => ({ ...prev, accounts: accData.accounts }));
+        if (taxData.taxes) setMasterData(prev => ({ ...prev, taxes: taxData.taxes }));
+        if (conData.contacts) setContacts(conData.contacts);
+      } catch (e) {
+        console.error('Failed to load expense master data');
+      }
+    }
+    loadData();
+  }, []);
 
   // Calculations
   const calcSubtotal = () => items.reduce((acc, item) => acc + (item.amount), 0);
   const calcTax = () => items.reduce((acc, item) => acc + (item.amount * (item.taxRate / 100)), 0);
   const calcWht = () => items.reduce((acc, item) => acc + (item.amount * (item.whtRate / 100)), 0);
-  const grandTotal = calcSubtotal() + calcTax() - calcWht();
+  const grandTotalValue = calcSubtotal() + calcTax() - calcWht();
 
   // Handlers
   const handleAddItem = () => {
-    setItems([...items, { id: Date.now(), category: 'Office Supplies', costCenter: '', description: '', amount: 0, taxRate: 0, whtRate: 0 }]);
+    setItems([...items, { 
+      id: Date.now(), accountId: '', categoryName: '', description: '', amount: 0, 
+      taxId: '', taxRate: 0, whtId: '', whtRate: 0,
+      taxObjectCode: '', tkuId: '0000000000000000000000', workerStatus: 'Resident',
+      ptkpStatus: 'TK/0', passportNo: '', facilityCap: 'N/A'
+    }]);
   };
 
   const handleRemoveItem = (id: number) => {
@@ -51,8 +102,25 @@ export default function NewExpenseForm() {
     }
   };
 
-  const handleItemChange = (id: number, field: string, value: string | number) => {
-    setItems(items.map(item => item.id === id ? { ...item, [field]: value } : item));
+  const handleItemChange = (id: number, field: string, value: any) => {
+    setItems(items.map(item => {
+      if (item.id === id) {
+        if (field === 'accountId') {
+          const acc = masterData.accounts.find(a => a.id === value);
+          return { ...item, accountId: value, categoryName: acc?.name || '' };
+        }
+        if (field === 'taxId') {
+          const t = masterData.taxes.find(tax => tax.id === value);
+          return { ...item, taxId: value, taxRate: t?.rate || 0 };
+        }
+        if (field === 'whtId') {
+          const t = masterData.taxes.find(tax => tax.id === value);
+          return { ...item, whtId: value, whtRate: t?.rate || 0 };
+        }
+        return { ...item, [field]: value };
+      }
+      return item;
+    }));
   };
 
   const handleSubmit = async () => {
@@ -66,9 +134,10 @@ export default function NewExpenseForm() {
       const payload = {
         date: new Date(formData.date).toISOString(),
         merchant: formData.merchant,
-        category: items[0]?.category || 'Unknown',
-        amount: grandTotal,
-        notes: formData.reference
+        contactId: formData.contactId || undefined,
+        items: items,
+        notes: formData.reference,
+        costCenterId: items[0]?.costCenter || undefined
       };
 
       const res = await fetch('/api/expenses', {
@@ -120,8 +189,32 @@ export default function NewExpenseForm() {
             <div className={styles.inputGrid}>
               <div className={styles.inputGroup}>
                 <label>Merchant / Vendor Name</label>
-                <input type="text" placeholder="e.g. AWS, Starbucks, Delta Airlines" className={styles.inputText} 
-                  value={formData.merchant} onChange={e => setFormData({...formData, merchant: e.target.value})} />
+                <div className={styles.dateWrapper}>
+                  <Search size={14} className={styles.inputIcon} />
+                  <select 
+                    className={styles.inputSelect} 
+                    value={formData.contactId} 
+                    onChange={e => {
+                      const con = contacts.find(c => c.id === e.target.value);
+                      setFormData({...formData, contactId: e.target.value, merchant: con?.name || ''});
+                    }}
+                  >
+                    <option value="">-- New / One-time Vendor --</option>
+                    {contacts.map(c => (
+                      <option key={c.id} value={c.id}>{c.name} ({c.idType}: {c.taxId || c.idNumber})</option>
+                    ))}
+                  </select>
+                </div>
+                {formData.contactId === '' && (
+                  <input 
+                    type="text" 
+                    placeholder="Enter Custom Merchant Name" 
+                    className={styles.inputText} 
+                    style={{ marginTop: '8px' }}
+                    value={formData.merchant} 
+                    onChange={e => setFormData({...formData, merchant: e.target.value})} 
+                  />
+                )}
               </div>
               <div className={styles.inputGroup}>
                 <label>Date of Expense</label>
@@ -156,50 +249,54 @@ export default function NewExpenseForm() {
             <div className={styles.itemsWrapper}>
               
               <div className={styles.itemsHeader}>
-                <div style={{ flex: 1.5 }}>Category (COA)</div>
-                <div style={{ flex: 1.5 }}>Description</div>
-                <div style={{ flex: 1.5 }}>Cost Center / Proj</div>
-                <div style={{ flex: 0.8 }}>Amount</div>
-                <div style={{ flex: 0.6 }}>VAT (%)</div>
-                <div style={{ flex: 0.6 }}>WHT (%)</div>
+                <div style={{ flex: 1.2 }}>Category (COA)</div>
+                <div style={{ flex: 1.2 }}>Description</div>
+                <div style={{ flex: 0.6 }}>Amount</div>
+                <div style={{ flex: 0.4 }}>VAT%</div>
+                <div style={{ flex: 0.4 }}>WHT%</div>
+                <div style={{ flex: 1.2 }}>Tax Object (Unifikasi)</div>
                 <div style={{ width: '30px' }}></div>
               </div>
 
               {items.map((item, index) => (
-                <div key={item.id} className={styles.itemRow}>
-                  <div style={{ flex: 1.5 }}>
-                    <select className={styles.itemSelect} value={item.category} onChange={e => handleItemChange(item.id, 'category', e.target.value)}>
-                      <option>Travel & Lodging</option>
-                      <option>Meals & Entertainment</option>
-                      <option>IT Infrastructure</option>
-                      <option>Office Supplies</option>
-                      <option>Marketing</option>
-                      <option>Rent / Utilities</option>
+                <React.Fragment key={item.id}>
+                <div className={styles.itemRow}>
+                  <div style={{ flex: 1.2 }}>
+                    <select className={styles.itemSelect} value={item.accountId} onChange={e => handleItemChange(item.id, 'accountId', e.target.value)}>
+                      <option value="">-- Select Account --</option>
+                      {masterData.accounts.map(acc => (
+                        <option key={acc.id} value={acc.id}>{acc.code} - {acc.name}</option>
+                      ))}
                     </select>
                   </div>
-                  <div style={{ flex: 1.5 }}>
-                    <input type="text" className={styles.itemInput} placeholder="What was this for?" 
+                  <div style={{ flex: 1.2 }}>
+                    <input type="text" className={styles.itemInput} placeholder="Description..." 
                            value={item.description} onChange={e => handleItemChange(item.id, 'description', e.target.value)} />
                   </div>
-                  <div style={{ flex: 1.5 }}>
-                    <select className={styles.itemSelect} value={item.costCenter} onChange={e => handleItemChange(item.id, 'costCenter', e.target.value)}>
-                      <option value="">-- None --</option>
-                      <option>Cabang Bali Expansion</option>
-                      <option>Marketing Campaign Q1</option>
-                      <option>IT Infrastructure</option>
-                    </select>
-                  </div>
-                  <div style={{ flex: 0.8 }}>
+                  <div style={{ flex: 0.6 }}>
                     <input type="number" className={styles.itemInput} placeholder="0.00" 
                            value={item.amount === 0 ? '' : item.amount} onChange={e => handleItemChange(item.id, 'amount', parseFloat(e.target.value) || 0)} />
                   </div>
-                  <div style={{ flex: 0.6 }}>
-                    <input type="number" className={styles.itemInput} placeholder="0" 
-                           value={item.taxRate === 0 ? '' : item.taxRate} onChange={e => handleItemChange(item.id, 'taxRate', parseFloat(e.target.value) || 0)} />
+                  <div style={{ flex: 0.4 }}>
+                    <input type="number" step="0.1" className={styles.itemInput} placeholder="0" list="vat-rates"
+                           value={item.taxRate} onChange={e => handleItemChange(item.id, 'taxRate', parseFloat(e.target.value) || 0)} />
                   </div>
-                  <div style={{ flex: 0.6 }}>
-                    <input type="number" className={styles.itemInput} placeholder="0" 
-                           value={item.whtRate === 0 ? '' : item.whtRate} onChange={e => handleItemChange(item.id, 'whtRate', parseFloat(e.target.value) || 0)} />
+                  <div style={{ flex: 0.4 }}>
+                    <input type="number" step="0.1" className={styles.itemInput} placeholder="0" list="wht-rates"
+                           value={item.whtRate} onChange={e => handleItemChange(item.id, 'whtRate', parseFloat(e.target.value) || 0)} />
+                  </div>
+                  <div style={{ flex: 1.2 }}>
+                    <select 
+                      className={styles.itemSelect} 
+                      value={item.taxObjectCode || ''} 
+                      onChange={e => handleItemChange(item.id, 'taxObjectCode', e.target.value)}
+                      disabled={item.whtRate === 0}
+                    >
+                      <option value="">-- No WHT Code --</option>
+                      {taxObjectCodes.map(code => (
+                        <option key={code.code} value={code.code}>{code.code} - {code.name}</option>
+                      ))}
+                    </select>
                   </div>
                   <div style={{ width: '30px', display: 'flex', justifyContent: 'flex-end' }}>
                     <button className={styles.deleteBtn} onClick={() => handleRemoveItem(item.id)} disabled={items.length === 1}>
@@ -207,6 +304,26 @@ export default function NewExpenseForm() {
                     </button>
                   </div>
                 </div>
+                {item.whtRate > 0 && (
+                  <div className={styles.whtDetailRow} style={{ display: 'flex', gap: '8px', padding: '0 12px 12px', background: '#F8FAFC', borderRadius: '0 0 8px 8px', marginTop: '-8px', marginBottom: '8px', border: '1px solid #E2E8F0', borderTop: 'none' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '10px', fontWeight: 700, color: '#64748B' }}>STATUS PEGAWAI</label>
+                      <select className={styles.itemSelect} style={{ padding: '4px' }} value={item.workerStatus} onChange={e => handleItemChange(item.id, 'workerStatus', e.target.value)}>
+                        <option value="Resident">Resident (DN)</option>
+                        <option value="Non-Resident">Non-Resident (LN)</option>
+                      </select>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '10px', fontWeight: 700, color: '#64748B' }}>ID TKU (22 DIGIT)</label>
+                      <input type="text" className={styles.itemInput} style={{ padding: '4px' }} value={item.tkuId} onChange={e => handleItemChange(item.id, 'tkuId', e.target.value)} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '10px', fontWeight: 700, color: '#64748B' }}>FASILITAS</label>
+                      <input type="text" className={styles.itemInput} style={{ padding: '4px' }} value={item.facilityCap} onChange={e => handleItemChange(item.id, 'facilityCap', e.target.value)} />
+                    </div>
+                  </div>
+                )}
+                </React.Fragment>
               ))}
             </div>
 
@@ -225,19 +342,19 @@ export default function NewExpenseForm() {
             
             <div className={styles.summaryRow}>
               <span>Subtotal</span>
-              <span>${calcSubtotal().toFixed(2)}</span>
+              <span>{formatCurrency(calcSubtotal())}</span>
             </div>
             <div className={styles.summaryRow}>
               <span>Estimated Tax (VAT)</span>
-              <span>${calcTax().toFixed(2)}</span>
+              <span>{formatCurrency(calcTax())}</span>
             </div>
             <div className={styles.summaryRow}>
               <span>WHT Deduction (PPh)</span>
-              <span style={{ color: '#DC2626' }}>-${calcWht().toFixed(2)}</span>
+              <span style={{ color: '#DC2626' }}>-{formatCurrency(calcWht())}</span>
             </div>
             <div className={styles.summaryTotal}>
               <span>Total Request (Net)</span>
-              <span>${grandTotal.toFixed(2)}</span>
+              <span>{formatCurrency(grandTotalValue)}</span>
             </div>
           </div>
 

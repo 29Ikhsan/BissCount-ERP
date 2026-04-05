@@ -18,36 +18,18 @@ import {
   Printer
 } from 'lucide-react';
 import styles from './page.module.css';
+import { exportToCSV, triggerImport } from '@/lib/utils';
+import { useLanguage } from '@/context/LanguageContext';
 
-// --- Initial Dummy State Data ---
-const initialInvoices = [
-  { id: '#INV-2024-001', client: 'Stark Industries', clientAvatar: 'SA', clientBg: '#DBEAFE', date: 'Oct 12, 2023', amount: '$45,000.00', status: 'PAID' },
-  { id: '#INV-2024-002', client: 'Wayne Corp', clientAvatar: 'WC', clientBg: '#E2E8F0', date: 'Oct 15, 2023', amount: '$12,450.00', status: 'PENDING' },
-];
-
-const initialQuotations = [
-  { id: '#QT-2024-001', client: 'LexCorp', clientAvatar: 'LC', clientBg: '#F3E8FF', date: 'Oct 25, 2023', amount: '$55,000.00', status: 'DRAFT' },
-  { id: '#QT-2024-002', client: 'Wayne Corp', clientAvatar: 'WC', clientBg: '#E2E8F0', date: 'Oct 26, 2023', amount: '$15,000.00', status: 'SENT' }
-];
-
-const initialSalesOrders = [
-  { id: '#SO-2024-001', client: 'Massive Dynamic', clientAvatar: 'MD', clientBg: '#D1FAE5', date: 'Oct 20, 2023', amount: '$8,200.00', status: 'ACCEPTED' },
-];
-
-const initialDeliveries = [
-  { id: '#DO-2024-001', client: 'Hooli', clientAvatar: 'H', clientBg: '#DBEAFE', date: 'Oct 22, 2023', amount: '$104,500.00', status: 'SHIPPED' }
-];
-
-const agingSummary = [
-  { bucket: 'Current', amount: 185000, color: '#10B981', percentage: 74 },
-  { bucket: '1-30 Days', amount: 42000, color: '#F59E0B', percentage: 17 },
-  { bucket: '31-60 Days', amount: 15000, color: '#F97316', percentage: 6 },
-  { bucket: '61-90 Days', amount: 4500, color: '#EF4444', percentage: 2 },
-  { bucket: '90+ Days', amount: 1890, color: '#7F1D1D', percentage: 1 },
-];
+// Dummy fallback only shown when DB has no records yet
+const initialInvoices: any[] = [];
+const initialQuotations: any[] = [];
+const initialSalesOrders: any[] = [];
+const initialDeliveries: any[] = [];
 
 export default function OrderToCashHub() {
   const router = useRouter();
+  const { t, formatCurrency, locale } = useLanguage();
   const [activeTab, setActiveTab] = useState('QUOTATIONS');
   
   // Interactive State Storage
@@ -55,6 +37,31 @@ export default function OrderToCashHub() {
   const [salesOrders, setSalesOrders] = useState(initialSalesOrders);
   const [deliveries, setDeliveries] = useState(initialDeliveries);
   const [invoices, setInvoices] = useState<any[]>(initialInvoices);
+  
+  // Filtering & Search
+  const [filterStatus, setFilterStatus] = useState('All Statuses');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const [agingSummary, setAgingSummary] = useState<any[]>([]);
+
+  const buildAgingSummary = (invList: any[]) => {
+    const now = Date.now();
+    const buckets = [
+      { bucket: 'Belum Jatuh Tempo', color: '#10B981', min: -Infinity, max: 0, amount: 0 },
+      { bucket: '1-30 Hari', color: '#F59E0B', min: 0, max: 30, amount: 0 },
+      { bucket: '31-60 Hari', color: '#F97316', min: 30, max: 60, amount: 0 },
+      { bucket: '61-90 Hari', color: '#EF4444', min: 60, max: 90, amount: 0 },
+      { bucket: '90+ Hari', color: '#7F1D1D', min: 90, max: Infinity, amount: 0 },
+    ];
+    let total = 0;
+    invList.filter(i => i.status === 'PENDING' || i.status === 'PARTIAL').forEach(inv => {
+      const daysOverdue = (now - new Date(inv.dueDate || inv.date).getTime()) / 86400000;
+      const outstanding = inv.grandTotal - (inv.paidAmount || 0);
+      buckets.forEach(b => { if (daysOverdue > b.min && daysOverdue <= b.max) { b.amount += outstanding; total += outstanding; } });
+    });
+    return buckets.map(b => ({ ...b, percentage: total > 0 ? Math.round((b.amount / total) * 100) : 0 }));
+  };
 
   useEffect(() => {
     const fetchLiveInvoices = async () => {
@@ -63,17 +70,19 @@ export default function OrderToCashHub() {
         const data = await res.json();
         if (data.invoices && data.invoices.length > 0) {
           const mapped = data.invoices.map((inv: any) => ({
-             id: inv.invoiceNo,
-             client: inv.clientName,
-             clientAvatar: inv.clientName.substring(0, 2).toUpperCase(),
-             clientBg: '#E2E8F0',
-             date: new Date(inv.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-             amount: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(inv.amount),
-             status: inv.status,
-             paidAmount: 0
+            _dbId: inv.id,  // keep real DB id for PATCH calls
+            id: inv.invoiceNo,
+            client: inv.clientName,
+            clientAvatar: inv.clientName.substring(0, 2).toUpperCase(),
+            clientBg: '#DBEAFE',
+            date: new Date(inv.date).toLocaleDateString(locale === 'id' ? 'id-ID' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            dueDate: inv.dueDate,
+            amount: Number(inv.grandTotal ?? inv.amount),  // keep numeric
+            paidAmount: Number(inv.paidAmount) || 0,
+            status: inv.status,
           }));
-          // Merge with initial dummy data or replace entirely. Replacing entirely:
           setInvoices(mapped);
+          setAgingSummary(buildAgingSummary(data.invoices));
         }
       } catch (err) {
         console.error('Failed to fetch invoices', err);
@@ -175,39 +184,55 @@ export default function OrderToCashHub() {
     }
   };
 
-  const handleRecordPayment = (id: string, currentAmountStr: string) => {
-    const invTotal = parseFloat(currentAmountStr.replace(/[^0-9.-]+/g, ""));
-    const inputStr = window.prompt(`Enter actual payment amount received (Total Due: $${invTotal.toLocaleString()}):`, invTotal.toString());
-    
-    if (inputStr === null || inputStr === "") return; // user cancelled prompt
-    
-    const payment = parseFloat(inputStr.replace(/[^0-9.-]+/g, ""));
-    if (isNaN(payment) || payment <= 0) {
-       alert("Invalid payment amount entered.");
-       return;
-    }
+  const handleRecordPayment = async (id: string, currentAmount: number) => {
+    const invTotal = typeof currentAmount === 'number' ? currentAmount : 0;
+    const inputStr = window.prompt(`${t('RecordPayment')} (Total: ${formatCurrency(invTotal)}):`, '');
+    if (inputStr === null || inputStr === '') return;
 
-    const prevInvoices = [...invoices];
-    
-    const updatedInvoices = invoices.map(inv => {
-      if (inv.id === id) {
-        const currentPaid = (inv as any).paidAmount || 0;
-        const newPaid = currentPaid + payment;
-        const totalRaw = parseFloat(inv.amount.replace(/[^0-9.-]+/g, ""));
-        
-        if (newPaid >= totalRaw) {
-           return { ...inv, paidAmount: totalRaw, status: 'PAID' };
+    const payment = parseFloat(inputStr.replace(/[^0-9.-]+/g, ''));
+    if (isNaN(payment) || payment <= 0) { alert('Nominal tidak valid.'); return; }
+
+    // Find DB id for API call
+    const inv = invoices.find(i => i.id === id);
+    const dbId = inv?._dbId;
+
+    if (dbId) {
+      // Persist to database via PATCH
+      try {
+        const res = await fetch(`/api/invoices/${dbId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ payment })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          // Update local state from API response
+          const updated = data.invoice;
+          setInvoices(invoices.map(i => i.id === id ? {
+            ...i,
+            paidAmount: Number(updated.paidAmount),
+            status: updated.status
+          } : i));
+          triggerToast(`Pembayaran ${formatCurrency(payment)} dicatat untuk Invoice ${id}.`, () => {});
         } else {
-           return { ...inv, paidAmount: newPaid, status: 'PARTIAL' };
+          alert(`Gagal: ${data.error}`);
         }
+      } catch (e) {
+        alert('Koneksi gagal ke server.');
       }
-      return inv;
-    });
-    setInvoices(updatedInvoices);
-    
-    triggerToast(`Payment of $${payment.toLocaleString('en-US', {minimumFractionDigits: 2})} recorded for Invoice ${id}.`, () => {
-       setInvoices(prevInvoices);
-    });
+    } else {
+      // Fallback: local state only (for dummy/pipeline-generated docs)
+      const prevInvoices = [...invoices];
+      const updatedInvoices = invoices.map(i => {
+        if (i.id === id) {
+          const newPaid = (i.paidAmount || 0) + payment;
+          return { ...i, paidAmount: newPaid, status: newPaid >= i.amount ? 'PAID' : 'PARTIAL' };
+        }
+        return i;
+      });
+      setInvoices(updatedInvoices);
+      triggerToast(`Pembayaran ${formatCurrency(payment)} dicatat untuk Invoice ${id}.`, () => setInvoices(prevInvoices));
+    }
   };
 
   const handleCancelDocument = (id: string) => {
@@ -243,6 +268,42 @@ export default function OrderToCashHub() {
   if (activeTab === 'DELIVERIES') activeData = deliveries;
   if (activeTab === 'INVOICES') activeData = invoices;
 
+  // Apply Filter
+  const filteredData = activeData.filter(doc => {
+    const matchesStatus = filterStatus === 'All Statuses' || doc.status === filterStatus.toUpperCase();
+    const matchesSearch = doc.client.toLowerCase().includes(searchQuery.toLowerCase()) || doc.id.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
+
+  // Pagination Logic
+  const itemsPerPage = 8;
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  const handleExport = () => {
+    const headers = ['ID', 'Client', 'Date', 'Amount', 'Status'];
+    const data = filteredData.map(d => ({
+      id: d.id,
+      client: d.client,
+      date: d.date,
+      amount: d.amount,
+      status: d.status
+    }));
+    exportToCSV(`BizzCount_${activeTab.toLowerCase()}_export.csv`, headers, data);
+  };
+
+  const handleImportTrigger = () => {
+    triggerImport((file) => {
+      triggerToast(`Successfully imported records from ${file.name}. Processing...`, () => {});
+    });
+  };
+
   return (
     <div className={styles.container}>
       {/* Undo Toast Notification */}
@@ -271,10 +332,10 @@ export default function OrderToCashHub() {
         </div>
         
         <div className={styles.headerActions}>
-          <button className={styles.exportBtn}>
+          <button className={styles.exportBtn} onClick={handleImportTrigger}>
             <Upload size={16} /> Import
           </button>
-          <button className={styles.exportBtn}>
+          <button className={styles.exportBtn} onClick={handleExport}>
             <Download size={16} /> Export
           </button>
           <button className={styles.addBtn} onClick={handleNewDocument}>
@@ -318,20 +379,23 @@ export default function OrderToCashHub() {
       {activeTab === 'INVOICES' && (
         <div className={styles.agingSection}>
           <div className={styles.agingHeader}>
-            <h3 className={styles.sectionTitle}>Accounts Receivable Aging</h3>
-            <p className={styles.sectionSubtitle}>Outstanding invoice balances categorized by days past due.</p>
+            <h3 className={styles.sectionTitle}>{t('ARAging')}</h3>
+            <p className={styles.sectionSubtitle}>{t('ARAgingSubtitle')}</p>
           </div>
           <div className={styles.agingGrid}>
             {agingSummary.map((item) => (
               <div key={item.bucket} className={styles.agingCard}>
                  <div className={styles.agingBucketLabel}>{item.bucket}</div>
-                 <div className={styles.agingAmount}>${item.amount.toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
+                 <div className={styles.agingAmount}>{formatCurrency(item.amount)}</div>
                  <div className={styles.agingBarBg}>
                    <div className={styles.agingBarFill} style={{ width: `${item.percentage}%`, backgroundColor: item.color }}></div>
                  </div>
-                 <div className={styles.agingPercentage}>{item.percentage}% of total</div>
+                 <div className={styles.agingPercentage}>{item.percentage}% dari total</div>
               </div>
             ))}
+            {agingSummary.length === 0 && (
+              <div style={{ color: '#64748b', fontSize: '13px', padding: '16px' }}>Tidak ada piutang yang outstanding.</div>
+            )}
           </div>
         </div>
       )}
@@ -342,7 +406,7 @@ export default function OrderToCashHub() {
           <div className={styles.filterGroup}>
             <div className={styles.selectWrapper}>
               <span className={styles.selectLabel}>STATUS:</span>
-              <select className={styles.selectInput}>
+              <select className={styles.selectInput} value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                 <option>All Statuses</option>
                 {activeTab === 'QUOTATIONS' && <><option>Draft</option><option>Sent</option><option>Cancelled</option></>}
                 {activeTab === 'SALES_ORDERS' && <><option>Accepted</option><option>Cancelled</option></>}
@@ -378,7 +442,7 @@ export default function OrderToCashHub() {
             </tr>
           </thead>
           <tbody>
-            {activeData.map((doc) => (
+            {paginatedData.map((doc) => (
               <tr key={doc.id}>
                 <td><span className={styles.invoiceId}>{doc.id}</span></td>
                 <td>
@@ -391,15 +455,15 @@ export default function OrderToCashHub() {
                 </td>
                 <td><span className={styles.dateText}>{doc.date}</span></td>
                 <td>
-                  <span className={styles.amountText}>{doc.amount}</span>
-                  {(doc as any).paidAmount > 0 && doc.status !== 'PAID' && (
+                  <span className={styles.amountText}>{formatCurrency(doc.amount)}</span>
+                  {(doc.paidAmount > 0) && doc.status !== 'PAID' && (
                     <div style={{ fontSize: '0.65rem', color: '#10B981', marginTop: '2px', fontWeight: 600 }}>
-                       Paid: ${(doc as any).paidAmount.toLocaleString('en-US', {minimumFractionDigits: 2})}
+                       Terbayar: {formatCurrency(doc.paidAmount)}
                     </div>
                   )}
-                  {(doc as any).paidAmount > 0 && doc.status !== 'PAID' && (
+                  {(doc.paidAmount > 0) && doc.status !== 'PAID' && (
                     <div style={{ fontSize: '0.65rem', color: '#EF4444', marginTop: '2px', fontWeight: 600 }}>
-                       Due: ${(parseFloat(doc.amount.replace(/[^0-9.-]+/g, "")) - (doc as any).paidAmount).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                       Sisa: {formatCurrency(doc.amount - doc.paidAmount)}
                     </div>
                   )}
                 </td>
@@ -458,23 +522,47 @@ export default function OrderToCashHub() {
                 </td>
               </tr>
             ))}
-            {activeData.length === 0 && (
+            {filteredData.length === 0 && (
               <tr>
                  <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>
-                    No records found in this pipeline stage.
+                    No records found matching your current filters.
                  </td>
               </tr>
             )}
           </tbody>
         </table>
         
-        {activeData.length > 0 && (
+        {filteredData.length > 0 && (
           <div className={styles.pagination}>
-            <span className={styles.showingText}>Showing 1 to {activeData.length} records</span>
+            <span className={styles.showingText}>
+              Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredData.length)} of {filteredData.length} records
+            </span>
             <div className={styles.pageNumbers}>
-               <button className={styles.pageBtn}>&lt;</button>
-               <button className={`${styles.pageBtn} ${styles.activePage}`}>1</button>
-               <button className={styles.pageBtn}>&gt;</button>
+               <button 
+                 className={`${styles.pageBtn} ${currentPage === 1 ? styles.btnDisabled : ''}`} 
+                 onClick={() => handlePageChange(currentPage - 1)}
+                 disabled={currentPage === 1}
+               >
+                 &lt;
+               </button>
+               
+               {[...Array(totalPages)].map((_, i) => (
+                 <button 
+                   key={i + 1}
+                   className={`${styles.pageBtn} ${currentPage === i + 1 ? styles.activePage : ''}`}
+                   onClick={() => handlePageChange(i + 1)}
+                 >
+                   {i + 1}
+                 </button>
+               ))}
+
+               <button 
+                 className={`${styles.pageBtn} ${currentPage === totalPages ? styles.btnDisabled : ''}`} 
+                 onClick={() => handlePageChange(currentPage + 1)}
+                 disabled={currentPage === totalPages}
+               >
+                 &gt;
+               </button>
             </div>
           </div>
         )}

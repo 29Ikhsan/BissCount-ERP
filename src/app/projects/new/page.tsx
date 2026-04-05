@@ -4,20 +4,46 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Building2, Briefcase, Calendar, Users, 
-  DollarSign, BarChart2, CheckCircle
+  Target, BarChart2, CheckCircle
 } from 'lucide-react';
 import styles from './page.module.css';
 
 export default function NewCostCenter() {
   const router = useRouter();
   const [showToast, setShowToast] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    code: '',
+    budget: 0
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setShowToast(true);
-    setTimeout(() => {
-      router.push('/projects');
-    }, 1500);
+    setIsSubmitting(true);
+    
+    try {
+      const response = await fetch('/api/cost-centers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create cost center');
+      }
+      
+      setShowToast(true);
+      setTimeout(() => {
+        router.push('/projects');
+      }, 1500);
+      
+    } catch (error) {
+      console.error(error);
+      alert('Error creating cost center');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -39,8 +65,8 @@ export default function NewCostCenter() {
           <button className={styles.btnCancel} onClick={() => router.push('/projects')}>
             Cancel
           </button>
-          <button className={styles.btnSave} onClick={handleSubmit}>
-            Create Cost Center
+          <button className={styles.btnSave} onClick={handleSubmit} disabled={isSubmitting}>
+            {isSubmitting ? 'Creating...' : 'Create Cost Center'}
           </button>
         </div>
       </div>
@@ -56,13 +82,27 @@ export default function NewCostCenter() {
             
             <div className={styles.inputGroup}>
               <label className={styles.inputLabel}>Cost Center Name</label>
-              <input type="text" className={styles.inputField} placeholder="e.g. Marketing Campaign Q4" required />
+              <input 
+                type="text" 
+                className={styles.inputField} 
+                placeholder="e.g. Marketing Campaign Q4" 
+                required 
+                value={formData.name}
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
+              />
             </div>
 
             <div className={styles.inputRow}>
               <div>
                 <label className={styles.inputLabel}>Project Code / Alias</label>
-                <input type="text" className={styles.inputField} placeholder="PRJ-Q4-MKT" />
+                <input 
+                  type="text" 
+                  className={styles.inputField} 
+                  placeholder="PRJ-Q4-MKT" 
+                  value={formData.code}
+                  onChange={(e) => setFormData({...formData, code: e.target.value})}
+                  required
+                />
               </div>
               <div>
                 <label className={styles.inputLabel}>Department Tag</label>
@@ -103,23 +143,29 @@ export default function NewCostCenter() {
         <div className={styles.rightCol}>
           <div className={styles.card}>
             <div className={styles.cardHeader}>
-              <DollarSign size={20} className={styles.cardIcon} />
+              <Target size={20} className={styles.cardIcon} />
               <h2 className={styles.cardTitle}>Financial Budgets</h2>
             </div>
             
             <div className={styles.inputGroup}>
               <label className={styles.inputLabel}>Expected Expense Budget</label>
               <div className={styles.currencyWrapper}>
-                <span className={styles.currencySymbol}>$</span>
-                <input type="number" className={`${styles.inputField} ${styles.currencyField}`} placeholder="150,000.00" />
+                <span className={styles.currencySymbol}>Rp</span>
+                <input 
+                  type="number" 
+                  className={`${styles.inputField} ${styles.currencyField}`} 
+                  placeholder="150000000" 
+                  value={formData.budget === 0 ? '' : formData.budget}
+                  onChange={(e) => setFormData({...formData, budget: parseFloat(e.target.value) || 0})}
+                />
               </div>
             </div>
 
             <div className={styles.inputGroup}>
               <label className={styles.inputLabel}>Expected Revenue Output</label>
               <div className={styles.currencyWrapper}>
-                <span className={styles.currencySymbol}>$</span>
-                <input type="number" className={`${styles.inputField} ${styles.currencyField}`} placeholder="280,000.00" />
+                <span className={styles.currencySymbol}>Rp</span>
+                <input type="number" className={`${styles.inputField} ${styles.currencyField}`} placeholder="280000000" />
               </div>
             </div>
             

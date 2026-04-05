@@ -1,0 +1,173 @@
+.container {
+  padding: 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header {
+  margin-bottom: 32px;
+}
+
+.title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.subtitle {
+  color: #64748b;
+  margin-top: 8px;
+  max-width: 800px;
+  font-size: 0.95rem;
+}
+
+.toolbar {
+  margin-bottom: 24px;
+  display: flex;
+  gap: 16px;
+}
+
+.searchBox {
+  flex: 1;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #94a3b8;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.searchBox input {
+  border: none;
+  background: transparent;
+  width: 100%;
+  font-size: 0.95rem;
+  outline: none;
+  color: #1e293b;
+}
+
+.logList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.logItem {
+  background: white;
+  border-radius: 16px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  border: 1px solid #f1f5f9;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.logItem:hover {
+  border-color: #e2e8f0;
+  transform: translateY(-1px);
+}
+
+.logBadge {
+  color: white;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  min-width: 80px;
+  text-align: center;
+}
+
+.logMain {
+  flex: 1;
+}
+
+.logHeader {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  align-items: center;
+}
+
+.entityName {
+  font-weight: 600;
+  color: #334155;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.logTime {
+  font-size: 0.8125rem;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.logDetails {
+  font-size: 0.8125rem;
+  color: #64748b;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.detailsJson {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.detailTag {
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: #475569;
+}
+
+.logUser {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 20px;
+  border-left: 2px solid #f1f5f9;
+  font-size: 0.875rem;
+  color: #475569;
+  font-weight: 500;
+  min-width: 140px;
+}
+
+.loading, .empty {
+  padding: 60px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 768px) {
+  .logItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .logUser {
+    border-left: none;
+    border-top: 1px solid #f1f5f9;
+    width: 100%;
+    padding-left: 0;
+    padding-top: 12px;
+  }
+}

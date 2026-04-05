@@ -11,9 +11,11 @@ import {
   UserPlus
 } from 'lucide-react';
 import styles from './page.module.css';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function ContactsDirectory() {
   const router = useRouter();
+  const { t, formatCurrency } = useLanguage();
   const [activeTab, setActiveTab] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -37,9 +39,6 @@ export default function ContactsDirectory() {
     fetchContacts();
   }, []);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Math.abs(value));
-  };
 
   const getFilteredContacts = () => {
     let filtered = contacts;
@@ -67,8 +66,8 @@ export default function ContactsDirectory() {
       {/* Header */}
       <div className={styles.header}>
         <div>
-          <h1 className={styles.pageTitle}>Contacts & CRM</h1>
-          <p className={styles.pageSubtitle}>Central directory for managing Customers, Vendors, and outstanding constraints.</p>
+          <h1 className={styles.pageTitle}>{t('ContactsCRM')}</h1>
+          <p className={styles.pageSubtitle}>{t('ContactsSubtitle')}</p>
         </div>
         <div className={styles.headerActions}>
           <button className={styles.btnPrimary} onClick={() => router.push('/contacts/new')}>
@@ -183,7 +182,7 @@ export default function ContactsDirectory() {
                       </td>
                       <td className={styles.textRight}>
                         {contact.balance === 0 ? (
-                          <span className={styles.moneyTextSecondary}>$0.00</span>
+                          <span className={styles.moneyTextSecondary}>{formatCurrency(0)}</span>
                         ) : (
                           <>
                             <div className={contact.balance > 0 ? styles.moneyTextSuccess : styles.moneyTextDanger}>

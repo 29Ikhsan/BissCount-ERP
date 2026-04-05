@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   ArrowLeft,
@@ -12,12 +12,16 @@ import {
   Image as ImageIcon,
   TestTubeDiagonal,
   Plus,
-  Trash2
+  Trash2,
+  RefreshCw,
+  Search
 } from 'lucide-react';
 import styles from './page.module.css';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function NewInventoryItem() {
   const router = useRouter();
+  const { formatCurrency } = useLanguage();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -26,23 +30,80 @@ export default function NewInventoryItem() {
     barcode: '',
     salesPrice: '',
     costPrice: '',
-    taxRate: '11',
+    taxId: '',
     initialStock: '0',
     minStock: '10',
     maxStock: '100',
     uom: 'Units',
-    preferredSupplier: '',
+    preferredSupplierId: '',
     trackInventory: true
   });
 
   const [isManufactured, setIsManufactured] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [bomItems, setBomItems] = useState([
+  const [bomItems, setBomItems] = useState<any[]>([
     { id: 1, sku: '', name: '', quantity: 1, uom: 'Units', estCost: 0 }
   ]);
 
-  const handleBomChange = (id: number, field: string, value: string | number) => {
-    setBomItems(bomItems.map(item => item.id === id ? { ...item, [field]: value } : item));
+  const [masterData, setMasterData] = useState({
+    taxes: [] as any[],
+    vendors: [] as any[],
+    products: [] as any[]
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchMasterData = async () => {
+      try {
+        const [taxRes, contactRes, productRes] = await Promise.all([
+          fetch('/api/taxes'),
+          fetch('/api/contacts'),
+          fetch('/api/inventory')
+        ]);
+        
+        const taxData = await taxRes.json();
+        const contactData = await contactRes.json();
+        const productData = await productRes.json();
+
+        setMasterData({
+          taxes: taxData.taxes || [],
+          vendors: contactData.contacts?.filter((c: any) => c.role === 'Vendor' || c.role === 'Both') || [],
+          products: productData.products || []
+        });
+      } catch (e) {
+        console.error('Failed to load master data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchMasterData();
+  }, []);
+
+  // Auto-calculate cost if BOM changes
+  useEffect(() => {
+    if (isManufactured) {
+      const totalCost = bomItems.reduce((sum, item) => sum + (item.quantity * item.estCost), 0);
+      setFormData(prev => ({ ...prev, costPrice: totalCost.toString() }));
+    }
+  }, [bomItems, isManufactured]);
+
+  const handleBomChange = (id: number, field: string, value: any) => {
+    let updatedBom = bomItems.map(item => {
+      if (item.id === id) {
+        if (field === 'sku') {
+          const selectedProd = masterData.products.find((p: any) => p.sku === value);
+          return { 
+            ...item, 
+            sku: value, 
+            name: selectedProd?.name || '', 
+            estCost: selectedProd?.cost || 0 
+          };
+        }
+        return { ...item, [field]: value };
+      }
+      return item;
+    });
+    setBomItems(updatedBom);
   };
 
   const handleChange = (field: string, value: string | boolean) => {
@@ -181,11 +242,11 @@ export default function NewInventoryItem() {
               <div className={styles.formGroup}>
                 <label className={styles.label}>Sales Price (Revenue)</label>
                 <div className={styles.inputGroup}>
-                  <span className={styles.inputPrefix}>$</span>
+                  <span className={styles.inputPrefix}>Rp</span>
                   <input 
                     type="number" 
                     className={styles.inputWithPrefix} 
-                    placeholder="0.00"
+                    placeholder="0"
                     value={formData.salesPrice}
                     onChange={(e) => handleChange('salesPrice', e.target.value)}
                   />
@@ -195,11 +256,11 @@ export default function NewInventoryItem() {
               <div className={styles.formGroup}>
                 <label className={styles.label}>Cost Price (COGS)</label>
                 <div className={styles.inputGroup}>
-                  <span className={styles.inputPrefix}>$</span>
+                  <span className={styles.inputPrefix}>Rp</span>
                   <input 
                     type="number" 
                     className={styles.inputWithPrefix} 
-                    placeholder="0.00"
+                    placeholder="0"
                     value={formData.costPrice}
                     onChange={(e) => handleChange('costPrice', e.target.value)}
                   />
@@ -207,14 +268,17 @@ export default function NewInventoryItem() {
               </div>
 
               <div className={styles.formGroup}>
-                <label className={styles.label}>Sales Tax / VAT (%)</label>
-                <input 
-                  type="number" 
-                  className={styles.input} 
-                  placeholder="11"
-                  value={formData.taxRate}
-                  onChange={(e) => handleChange('taxRate', e.target.value)}
-                />
+                <label className={styles.label}>Sales Tax / VAT Binding</label>
+                <select 
+                  className={styles.input}
+                  value={formData.taxId}
+                  onChange={(e) => handleChange('taxId', e.target.value)}
+                >
+                  <option value="">-- No Tax --</option>
+                  {masterData.taxes.map((t: any) => (
+                    <option key={t.id} value={t.id}>{t.name} ({t.rate}%)</option>
+                  ))}
+                </select>
               </div>
 
               <div className={styles.formGroup}>
@@ -223,13 +287,13 @@ export default function NewInventoryItem() {
                   <span className={styles.inputPrefix}><Truck size={14} /></span>
                   <select 
                     className={styles.inputWithPrefix}
-                    value={formData.preferredSupplier}
-                    onChange={(e) => handleChange('preferredSupplier', e.target.value)}
+                    value={formData.preferredSupplierId}
+                    onChange={(e) => handleChange('preferredSupplierId', e.target.value)}
                   >
                     <option value="">-- Select Vendor --</option>
-                    <option value="S1">Global Core Tech</option>
-                    <option value="S2">Vulcan Metals Inc.</option>
-                    <option value="S3">Network Solutions Corp.</option>
+                    {masterData.vendors.map((v: any) => (
+                      <option key={v.id} value={v.id}>{v.name}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -336,15 +400,24 @@ export default function NewInventoryItem() {
                     {bomItems.map(item => (
                       <tr key={item.id} style={{ borderBottom: '1px dotted #E5E7EB' }}>
                         <td style={{ padding: '8px 12px' }}>
-                          <input type="text" placeholder="Search item..." className={styles.input} style={{ width: '100%', border: 'none', borderBottom: '1px solid #d1d5db', borderRadius: 0 }} 
-                                 value={item.sku} onChange={(e) => handleBomChange(item.id, 'sku', e.target.value)} />
+                          <select 
+                            className={styles.input} 
+                            style={{ width: '100%', border: 'none', borderBottom: '1px solid #d1d5db', borderRadius: 0 }}
+                            value={item.sku}
+                            onChange={(e) => handleBomChange(item.id, 'sku', e.target.value)}
+                          >
+                            <option value="">-- Select Component --</option>
+                            {masterData.products.filter(p => p.sku !== formData.sku).map(p => (
+                              <option key={p.id} value={p.sku}>[{p.sku}] {p.name}</option>
+                            ))}
+                          </select>
                         </td>
                         <td style={{ padding: '8px 12px' }}>
                           <input type="number" className={styles.input} style={{ width: '80px', border: 'none', borderBottom: '1px solid #d1d5db', borderRadius: 0, textAlign: 'center' }} 
                                  value={item.quantity} onChange={(e) => handleBomChange(item.id, 'quantity', parseFloat(e.target.value) || 0)} />
                         </td>
                         <td style={{ padding: '8px 12px', fontWeight: 500 }}>
-                          ${(item.quantity * item.estCost).toFixed(2)}
+                          {formatCurrency(item.quantity * item.estCost)}
                         </td>
                         <td style={{ padding: '8px 12px', textAlign: 'center' }}>
                            <button style={{ background: 'transparent', border: 'none', color: '#EF4444', cursor: 'pointer' }}

@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "PurchaseOrder" ADD COLUMN     "type" TEXT NOT NULL DEFAULT 'PURCHASE_ORDER';

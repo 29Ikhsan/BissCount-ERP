@@ -8,80 +8,140 @@ import {
   Send,
   Plus,
   Trash2,
-  FileText
+  FileText,
+  Search,
+  Package
 } from 'lucide-react';
 import styles from './page.module.css';
+import { useLanguage } from '@/context/LanguageContext';
 
 function DocumentFormBody() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { formatCurrency } = useLanguage();
+  const [orgLogo, setOrgLogo] = useState<string | null>(null);
   const [docType, setDocType] = useState('QUOTATION');
   const [discount, setDiscount] = useState(0);
   const [wht, setWht] = useState(0);
+  const [whtRate, setWhtRate] = useState(0);
   const [downpayment, setDownpayment] = useState(0);
-
+  const [dpRate, setDpRate] = useState(0);
+  const [isVatTaxable, setIsVatTaxable] = useState(false);
   useEffect(() => {
     const type = searchParams.get('type');
-    if (type) {
-      setDocType(type.toUpperCase());
-    }
+    if (type) setDocType(type.toUpperCase());
   }, [searchParams]);
 
   const [clientId, setClientId] = useState('');
   const [clientName, setClientName] = useState('');
   const [contacts, setContacts] = useState<any[]>([]);
+  const [costCenters, setCostCenters] = useState<any[]>([]);
+  const [masterData, setMasterData] = useState({ products: [] as any[], taxes: [] as any[] });
+  const [selectedCostCenter, setSelectedCostCenter] = useState('');
 
   useEffect(() => {
-    async function loadContacts() {
+    async function loadData() {
       try {
-        const res = await fetch('/api/contacts');
-        const data = await res.json();
-        if (data.contacts) {
-          // Filter out vendors from invoices list context
-          setContacts(data.contacts.filter((c: any) => c.type === 'Customer' || c.type === 'Both'));
+        const [contactsRes, ccRes, prodRes, taxRes, settingsRes] = await Promise.all([
+          fetch('/api/contacts'),
+          fetch('/api/cost-centers'),
+          fetch('/api/inventory'),
+          fetch('/api/taxes'),
+          fetch('/api/settings')
+        ]);
+        const contactsData = await contactsRes.json();
+        const ccData = await ccRes.json();
+        const prodData = await prodRes.json();
+        const taxData = await taxRes.json();
+        const settingsData = await settingsRes.json();
+        
+        if (settingsData.tenant && settingsData.tenant.logoUrl) {
+          setOrgLogo(settingsData.tenant.logoUrl);
         }
+        
+        if (contactsData.contacts) {
+          setContacts(contactsData.contacts.filter((c: any) => c.type === 'Customer' || c.type === 'Both'));
+        }
+        if (ccData.costCenters) {
+          setCostCenters(ccData.costCenters);
+        }
+        setMasterData({
+          products: prodData.products || [],
+          taxes: taxData.taxes || []
+        });
       } catch (e) {
-        console.error('Failed to load contacts');
+        console.error('Failed to load form data');
       }
     }
-    loadContacts();
+    loadData();
   }, []);
 
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [dueDate, setDueDate] = useState(new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [items, setItems] = useState([
-    { id: 1, description: '', quantity: 1, unitPrice: 0, tax: 0, total: 0 }
+  const [items, setItems] = useState<any[]>([
+    { id: 1, productId: '', description: '', quantity: 1, unitPrice: 0, taxId: '', taxRate: 0, total: 0 }
   ]);
 
   const handleAddItem = () => {
-    const newItem = {
-      id: items.length + 1,
-      description: '',
-      quantity: 1,
-      unitPrice: 0,
-      tax: 0,
-      total: 0
-    };
-    setItems([...items, newItem]);
+    setItems([...items, { id: Date.now(), productId: '', description: '', quantity: 1, unitPrice: 0, taxId: '', taxRate: 0, total: 0 }]);
   };
 
   const handleRemoveItem = (id: number) => {
     setItems(items.filter(item => item.id !== id));
   };
 
-  const handleItemChange = (id: number, field: string, value: string | number) => {
-    setItems(items.map(item => item.id === id ? { ...item, [field]: value } : item));
+  const handleItemChange = (id: number, field: string, value: any) => {
+    setItems(items.map(item => {
+      if (item.id === id) {
+        if (field === 'productId') {
+          const product = masterData.products.find(p => p.id === value);
+          return {
+            ...item,
+            productId: value,
+            description: product?.name || '',
+            unitPrice: product?.price || 0,
+            taxId: product?.taxId || '',
+            taxRate: product?.tax?.rate || 0
+          };
+        }
+        if (field === 'taxRate') {
+          return { ...item, taxRate: Number(value) || 0, taxId: '' };
+        }
+        return { ...item, [field]: value };
+      }
+      return item;
+    }));
   };
 
-  const calculateSubtotal = () => {
-    return items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-  };
-
+  const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+  
   const calculateTax = () => {
-    return items.reduce((sum, item) => sum + (item.quantity * item.unitPrice * (item.tax / 100)), 0);
+    if (!isVatTaxable) return 0;
+    return items.reduce((sum, item) => {
+      const itemTaxBase = item.unitPrice * (11/12);
+      return sum + (item.quantity * itemTaxBase * (item.taxRate / 100));
+    }, 0);
   };
+
+  const dpp = subtotal - discount;
+  const vat = calculateTax();
+  const grandTotal = dpp + vat - wht;
+  const balanceDue = grandTotal - downpayment;
+
+  // Helpers for WHT and DP based on percentage
+  useEffect(() => {
+    if (whtRate > 0) {
+      setWht(dpp * (whtRate / 100));
+    }
+  }, [whtRate, dpp]);
+
+  useEffect(() => {
+    if (dpRate > 0) {
+      setDownpayment(grandTotal * (dpRate / 100));
+    }
+  }, [dpRate, grandTotal]);
 
   const handleSave = async () => {
     setIsSubmitting(true);
@@ -89,9 +149,12 @@ function DocumentFormBody() {
       const payload = {
         clientName: clientName || (clientId === 'manual' ? 'Walk-in Customer' : 'Unknown'),
         contactId: clientId && clientId !== 'manual' ? clientId : undefined,
+        costCenterId: selectedCostCenter || undefined,
         date: new Date(date).toISOString(),
         dueDate: new Date(dueDate).toISOString(),
-        items
+        items,
+        discountAmount: discount,
+        isVatTaxable: isVatTaxable
       };
 
       const res = await fetch('/api/invoices', {
@@ -134,12 +197,15 @@ function DocumentFormBody() {
 
       <div className={styles.formCard}>
         <div className={styles.formHeader}>
+          {orgLogo && (
+            <img src={orgLogo} alt="Logo" style={{ height: '48px', objectFit: 'contain', marginRight: '16px' }} />
+          )}
           <div className={styles.docIconWrap}>
             <FileText size={24} color="#0F3B8C" />
           </div>
           <div>
             <h1 className={styles.formTitle}>Create New {docType.replace('_', ' ')}</h1>
-            <p className={styles.formSubtitle}>Enter client and transaction details below to officially record this stage.</p>
+            <p className={styles.formSubtitle}>Masukkan detail klien dan transaksi untuk merekam dokumen ini secara resmi.</p>
           </div>
         </div>
 
@@ -156,6 +222,20 @@ function DocumentFormBody() {
                <option value="SALES_ORDERS">Sales Order</option>
                <option value="DELIVERIES">Delivery Note</option>
                <option value="INVOICES">Sales Invoice</option>
+             </select>
+           </div>
+           
+           <div className={styles.inputGroup}>
+             <label>Project / Cost Center</label>
+             <select 
+               className={styles.inputSelect}
+               value={selectedCostCenter}
+               onChange={(e) => setSelectedCostCenter(e.target.value)}
+             >
+               <option value="">-- No Tag (General) --</option>
+               {costCenters.map(cc => (
+                 <option key={cc.id} value={cc.id}>{cc.code} - {cc.name}</option>
+               ))}
              </select>
            </div>
            
@@ -177,6 +257,19 @@ function DocumentFormBody() {
                  <option key={c.id} value={c.id}>{c.name} ({c.code})</option>
                ))}
                <option value="manual">+ Walk-in Customer (Unregistered)</option>
+             </select>
+           </div>
+
+           <div className={styles.inputGroup}>
+             <label>VAT Status</label>
+             <select 
+               className={styles.inputSelect}
+               style={{ border: isVatTaxable ? '2px solid #0EA5E9' : '1px solid #E5E7EB', fontWeight: isVatTaxable ? 700 : 400 }}
+               value={isVatTaxable ? 'TAXABLE' : 'NON_TAXABLE'}
+               onChange={(e) => setIsVatTaxable(e.target.value === 'TAXABLE')}
+             >
+               <option value="NON_TAXABLE">Non-Taxable (No VAT)</option>
+               <option value="TAXABLE">VAT Taxable (Indo Gross-up 11/12)</option>
              </select>
            </div>
         </div>
@@ -203,9 +296,10 @@ function DocumentFormBody() {
         <table className={styles.itemTable}>
           <thead>
             <tr>
-              <th style={{ width: '40%' }}>Description</th>
+              <th style={{ width: '30%' }}>Description</th>
               <th style={{ width: '10%' }}>Qty</th>
-              <th style={{ width: '20%' }}>Unit Price</th>
+              <th style={{ width: '15%' }}>Unit Price</th>
+              {isVatTaxable && <th style={{ width: '15%', color: '#0EA5E9' }}>Tax Base (DPP)</th>}
               <th style={{ width: '10%' }}>Tax (%)</th>
               <th style={{ width: '15%', textAlign: 'right' }}>Amount</th>
               <th style={{ width: '5%' }}></th>
@@ -215,18 +309,56 @@ function DocumentFormBody() {
             {items.map((item, idx) => (
               <tr key={item.id}>
                 <td>
-                  <input type="text" className={styles.gridInput} placeholder="Product or Service name" value={item.description} onChange={(e) => handleItemChange(item.id, 'description', e.target.value)} />
+                  <select 
+                    className={styles.gridInput} 
+                    value={item.productId} 
+                    onChange={(e) => handleItemChange(item.id, 'productId', e.target.value)}
+                  >
+                    <option value="">-- Manual Entry --</option>
+                    {masterData.products.map(p => (
+                      <option key={p.id} value={p.id}>[{p.sku}] {p.name}</option>
+                    ))}
+                  </select>
+                  {item.productId === '' && (
+                    <input 
+                      type="text" 
+                      className={styles.gridInput} 
+                      style={{ marginTop: '4px' }}
+                      placeholder="Manual description..." 
+                      value={item.description} 
+                      onChange={(e) => handleItemChange(item.id, 'description', e.target.value)} 
+                    />
+                  )}
                 </td>
                 <td>
                   <input type="number" min="1" className={styles.gridInput} value={item.quantity} onChange={(e) => handleItemChange(item.id, 'quantity', Number(e.target.value))} />
                 </td>
                 <td>
-                  <input type="number" min="0" step="0.01" className={styles.gridInput} value={item.unitPrice === 0 ? '' : item.unitPrice} placeholder="$0.00" onChange={(e) => handleItemChange(item.id, 'unitPrice', Number(e.target.value))} />
+                  <input type="number" min="0" step="1" className={styles.gridInput} value={item.unitPrice === 0 ? '' : item.unitPrice} placeholder="0" onChange={(e) => handleItemChange(item.id, 'unitPrice', Number(e.target.value))} />
                 </td>
-                <td>
-                  <input type="number" min="0" className={styles.gridInput} value={item.tax} onChange={(e) => handleItemChange(item.id, 'tax', Number(e.target.value))} />
+                {isVatTaxable && (
+                  <td style={{ verticalAlign: 'middle', fontSize: '0.85rem', color: '#0EA5E9', fontWeight: 600 }}>
+                    {formatCurrency(item.unitPrice * (11/12))}
+                  </td>
+                )}
+                <td style={{ opacity: isVatTaxable ? 1 : 0.4 }}>
+                  <input 
+                    type="number" 
+                    step="0.01"
+                    list="tax-options"
+                    disabled={!isVatTaxable}
+                    className={styles.gridInput} 
+                    style={{ backgroundColor: !isVatTaxable ? '#f3f4f6' : 'white' }}
+                    value={isVatTaxable ? item.taxRate : 0} 
+                    onChange={(e) => handleItemChange(item.id, 'taxRate', e.target.value)}
+                    placeholder="0"
+                  />
+                  <datalist id="tax-options">
+                    <option value="0">Zero (0%)</option>
+                    <option value="11">PPN (11%)</option>
+                  </datalist>
                 </td>
-                <td style={{ textAlign: 'right', verticalAlign: 'middle', fontWeight: 600 }}>${(item.quantity * item.unitPrice).toFixed(2)}</td>
+                <td style={{ textAlign: 'right', verticalAlign: 'middle', fontWeight: 600 }}>{formatCurrency(item.quantity * item.unitPrice)}</td>
                 <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
                   <button className={styles.deleteBtn} onClick={() => handleRemoveItem(item.id)}>
                     <Trash2 size={16} />
@@ -259,58 +391,82 @@ function DocumentFormBody() {
           <div className={styles.calcArea}>
             <div className={styles.calcRow}>
               <span>Subtotal</span>
-              <span>${calculateSubtotal().toFixed(2)}</span>
+              <span>{formatCurrency(subtotal)}</span>
             </div>
             <div className={styles.calcRow} style={{ alignItems: 'center' }}>
               <span>Commercial Discount</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ color: '#EF4444', fontWeight: 600 }}>-$</span>
+                <span style={{ color: '#EF4444', fontWeight: 600 }}>-Rp</span>
                 <input 
                   type="number" 
                   style={{ width: '70px', textAlign: 'right', border: '1px solid #e2e8f0', borderRadius: '4px', outline: 'none', fontSize: '0.8rem', padding: '2px 6px' }} 
                   value={discount === 0 ? '' : discount} 
-                  placeholder="0.00"
+                  placeholder="0"
                   onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)} 
                 />
               </div>
             </div>
-            <div className={styles.calcRow}>
+            <div className={styles.calcRow} style={{ color: '#0F3B8C', fontWeight: 600 }}>
+              <span>Tax Base (DPP / Harga for Tax)</span>
+              <span>{formatCurrency(dpp)}</span>
+            </div>
+            <div className={styles.calcRow} style={{ color: isVatTaxable ? '#6B7280' : '#475569', opacity: isVatTaxable ? 0.6 : 1 }}>
               <span>Value Added Tax (VAT)</span>
-              <span>${calculateTax().toFixed(2)}</span>
+              <span>{formatCurrency(vat)}</span>
             </div>
             <div className={styles.calcRow} style={{ alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
               <span>Withholding Tax (WHT)</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ color: '#EF4444', fontWeight: 600 }}>-$</span>
                 <input 
                   type="number" 
-                  style={{ width: '70px', textAlign: 'right', border: '1px solid #e2e8f0', borderRadius: '4px', outline: 'none', fontSize: '0.8rem', padding: '2px 6px' }} 
+                  style={{ width: '45px', textAlign: 'center', border: '1px solid #e2e8f0', borderRadius: '4px', outline: 'none', fontSize: '0.75rem', padding: '2px' }} 
+                  value={whtRate === 0 ? '' : whtRate} 
+                  placeholder="%"
+                  onChange={(e) => setWhtRate(parseFloat(e.target.value) || 0)} 
+                />
+                <span style={{ color: '#EF4444', fontWeight: 600 }}>-Rp</span>
+                <input 
+                  type="number" 
+                  style={{ width: '80px', textAlign: 'right', border: '1px solid #e2e8f0', borderRadius: '4px', outline: 'none', fontSize: '0.8rem', padding: '2px 6px' }} 
                   value={wht === 0 ? '' : wht} 
-                  placeholder="0.00"
-                  onChange={(e) => setWht(parseFloat(e.target.value) || 0)} 
+                  placeholder="0"
+                  onChange={(e) => {
+                    setWht(parseFloat(e.target.value) || 0);
+                    setWhtRate(0); // Clear rate if manual edit
+                  }} 
                 />
               </div>
             </div>
             <div className={styles.calcRowTotal} style={{ paddingTop: '8px' }}>
               <span>Grand Total</span>
-              <span>${Math.max(0, calculateSubtotal() - discount + calculateTax() - wht).toFixed(2)}</span>
+              <span>{formatCurrency(Math.max(0, grandTotal))}</span>
             </div>
             <div className={styles.calcRow} style={{ alignItems: 'center', backgroundColor: '#f8fafc', padding: '8px', borderRadius: '4px', marginTop: '8px' }}>
               <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>Downpayment / Advance</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ color: '#0EA5E9', fontWeight: 600 }}>-$</span>
                 <input 
                   type="number" 
-                  style={{ width: '80px', textAlign: 'right', border: '1px solid #BAE6FD', borderRadius: '4px', outline: 'none', fontSize: '0.85rem', padding: '4px 6px', color: '#0EA5E9', fontWeight: 600 }} 
+                  style={{ width: '45px', textAlign: 'center', border: '1px solid #BAE6FD', borderRadius: '4px', outline: 'none', fontSize: '0.75rem', padding: '3px', color: '#0EA5E9' }} 
+                  value={dpRate === 0 ? '' : dpRate} 
+                  placeholder="%"
+                  onChange={(e) => setDpRate(parseFloat(e.target.value) || 0)} 
+                />
+                <span style={{ color: '#0EA5E9', fontWeight: 600 }}>-Rp</span>
+                <input 
+                  type="number" 
+                  style={{ width: '90px', textAlign: 'right', border: '1px solid #BAE6FD', borderRadius: '4px', outline: 'none', fontSize: '0.85rem', padding: '4px 6px', color: '#0EA5E9', fontWeight: 600 }} 
                   value={downpayment === 0 ? '' : downpayment} 
-                  placeholder="0.00"
-                  onChange={(e) => setDownpayment(parseFloat(e.target.value) || 0)} 
+                  placeholder="0"
+                  onChange={(e) => {
+                    setDownpayment(parseFloat(e.target.value) || 0);
+                    setDpRate(0); // Clear rate if manual edit
+                  }} 
                 />
               </div>
             </div>
             <div className={styles.calcRowTotal} style={{ marginTop: '8px', backgroundColor: '#EFF6FF', padding: '12px', borderRadius: '6px', border: '1px solid #BFDBFE' }}>
               <span style={{ color: '#1E40AF', fontSize: '1.05rem' }}>Balance Due</span>
-              <span style={{ color: '#1E40AF', fontSize: '1.3rem' }}>${Math.max(0, (calculateSubtotal() - discount + calculateTax() - wht) - downpayment).toFixed(2)}</span>
+              <span style={{ color: '#1E40AF', fontSize: '1.3rem' }}>{formatCurrency(Math.max(0, balanceDue))}</span>
             </div>
           </div>
         </div>

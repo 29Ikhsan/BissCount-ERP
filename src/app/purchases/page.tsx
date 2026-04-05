@@ -19,43 +19,50 @@ import {
 } from 'lucide-react';
 import { generateDocumentPDF } from '@/lib/pdfGenerator';
 import styles from './page.module.css';
+import { exportToCSV, triggerImport } from '@/lib/utils';
+import { useLanguage } from '@/context/LanguageContext';
 
-// --- Initial Dummy State Data ---
-const initialVendorBills = [
-  { id: '#BILL-2024-001', client: 'Amazon Web Services', clientAvatar: 'AW', clientBg: '#FCE7F3', date: 'Oct 12, 2023', amount: '$4,500.00', status: 'PAID', paidAmount: 4500 },
-  { id: '#BILL-2024-002', client: 'WeWork', clientAvatar: 'WW', clientBg: '#E2E8F0', date: 'Oct 15, 2023', amount: '$12,450.00', status: 'PENDING', paidAmount: 0 },
-];
+// Empty fallbacks — real data comes from API
+const initialVendorBills: any[] = [];
+const initialRequisitions: any[] = [];
+const initialPurchaseOrders: any[] = [];
+const initialGoodsReceipts: any[] = [];
 
-const initialRequisitions = [
-  { id: '#PR-2024-005', client: 'IT Department', clientAvatar: 'IT', clientBg: '#DBEAFE', date: 'Oct 25, 2023', amount: '$5,000.00', status: 'DRAFT', paidAmount: 0 },
-  { id: '#PR-2024-006', client: 'Marketing Team', clientAvatar: 'MK', clientBg: '#D1FAE5', date: 'Oct 26, 2023', amount: '$15,000.00', status: 'PENDING', paidAmount: 0 }
-];
-
-const initialPurchaseOrders = [
-  { id: '#PO-2024-004', client: 'Dell Computers (Vendor)', clientAvatar: 'DC', clientBg: '#FEF08A', date: 'Oct 20, 2023', amount: '$8,200.00', status: 'APPROVED', paidAmount: 0 },
-];
-
-const initialGoodsReceipts = [
-  { id: '#GR-2024-003', client: 'Staples Office (Vendor)', clientAvatar: 'ST', clientBg: '#FFEDD5', date: 'Oct 22, 2023', amount: '$1,500.00', status: 'RECEIVED', paidAmount: 0 }
-];
-
-const payableSummary = [
-  { bucket: 'Current', amount: 85000, color: '#10B981', percentage: 65 },
-  { bucket: '1-30 Days', amount: 25000, color: '#F59E0B', percentage: 20 },
-  { bucket: '31-60 Days', amount: 12000, color: '#F97316', percentage: 10 },
-  { bucket: '61-90 Days', amount: 4500, color: '#EF4444', percentage: 4 },
-  { bucket: '90+ Days', amount: 1500, color: '#7F1D1D', percentage: 1 },
-];
 
 export default function ProcureToPayHub() {
   const router = useRouter();
+  const { t, formatCurrency, locale } = useLanguage();
   const [activeTab, setActiveTab] = useState('REQUISITION');
-  
+  const [payableSummary, setPayableSummary] = useState<any[]>([]);
+
+  const buildPayableSummary = (poList: any[]) => {
+    const now = Date.now();
+    const buckets = [
+      { bucket: 'Belum Jatuh Tempo', color: '#10B981', min: -Infinity, max: 0, amount: 0 },
+      { bucket: '1-30 Hari', color: '#F59E0B', min: 0, max: 30, amount: 0 },
+      { bucket: '31-60 Hari', color: '#F97316', min: 30, max: 60, amount: 0 },
+      { bucket: '61-90 Hari', color: '#EF4444', min: 60, max: 90, amount: 0 },
+      { bucket: '90+ Hari', color: '#7F1D1D', min: 90, max: Infinity, amount: 0 },
+    ];
+    let total = 0;
+    poList.filter(p => p.status === 'PENDING' || p.status === 'APPROVED').forEach(po => {
+      const daysOverdue = (now - new Date(po.rawDate || po.date).getTime()) / 86400000;
+      const outstanding = po.grandTotal || po.amount;
+      buckets.forEach(b => { if (daysOverdue > b.min && daysOverdue <= b.max) { b.amount += outstanding; total += outstanding; } });
+    });
+    return buckets.map(b => ({ ...b, percentage: total > 0 ? Math.round((b.amount / total) * 100) : 0 }));
+  };
+
   // Interactive State Storage
   const [requisitions, setRequisitions] = useState(initialRequisitions);
   const [purchaseOrders, setPurchaseOrders] = useState<any[]>(initialPurchaseOrders);
   const [goodsReceipts, setGoodsReceipts] = useState(initialGoodsReceipts);
   const [vendorBills, setVendorBills] = useState(initialVendorBills);
+
+  // Filtering & Search
+  const [filterStatus, setFilterStatus] = useState('All Statuses');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const fetchPOs = async () => {
@@ -64,16 +71,20 @@ export default function ProcureToPayHub() {
         const data = await res.json();
         if (data.purchaseOrders && data.purchaseOrders.length > 0) {
           const mapped = data.purchaseOrders.map((po: any) => ({
-             id: po.poNumber,
-             client: po.supplier,
-             clientAvatar: po.supplier.substring(0, 2).toUpperCase(),
-             clientBg: '#FEF08A',
-             date: new Date(po.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-             amount: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(po.amount),
-             status: po.status,
-             paidAmount: 0
+            _dbId: po.id,
+            id: po.poNumber,
+            client: po.supplier,
+            clientAvatar: po.supplier.substring(0, 2).toUpperCase(),
+            clientBg: '#FEF08A',
+            rawDate: po.date,
+            date: new Date(po.date).toLocaleDateString(locale === 'id' ? 'id-ID' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            amount: Number(po.grandTotal ?? po.amount),
+            grandTotal: Number(po.grandTotal ?? po.amount),
+            status: po.status,
+            paidAmount: 0
           }));
           setPurchaseOrders(mapped);
+          setPayableSummary(buildPayableSummary(data.purchaseOrders));
         }
       } catch (err) {
         console.error('Fetch PO failed', err);
@@ -175,11 +186,10 @@ export default function ProcureToPayHub() {
     }
   };
 
-  const handleRecordPayment = (id: string, currentAmountStr: string) => {
-    const invTotal = parseFloat(currentAmountStr.replace(/[^0-9.-]+/g, ""));
-    const inputStr = window.prompt(`Enter actual payment sent to Vendor (Total Due: $${invTotal.toLocaleString()}):`, invTotal.toString());
+  const handleRecordPayment = (id: string, currentAmount: number) => {
+    const inputStr = window.prompt(`Enter actual payment sent to Vendor (Total Due: ${formatCurrency(currentAmount)}):`, currentAmount.toString());
     
-    if (inputStr === null || inputStr === "") return; // user cancelled prompt
+    if (inputStr === null || inputStr === "") return;
     
     const payment = parseFloat(inputStr.replace(/[^0-9.-]+/g, ""));
     if (isNaN(payment) || payment <= 0) {
@@ -193,7 +203,7 @@ export default function ProcureToPayHub() {
       if (inv.id === id) {
         const currentPaid = (inv as any).paidAmount || 0;
         const newPaid = currentPaid + payment;
-        const totalRaw = parseFloat(inv.amount.replace(/[^0-9.-]+/g, ""));
+        const totalRaw = inv.amount as number;
         
         if (newPaid >= totalRaw) {
            return { ...inv, paidAmount: totalRaw, status: 'PAID' };
@@ -205,7 +215,7 @@ export default function ProcureToPayHub() {
     });
     setVendorBills(updatedBills);
     
-    triggerToast(`Payment dispersal of $${payment.toLocaleString('en-US', {minimumFractionDigits: 2})} recorded for Bill ${id}.`, () => {
+    triggerToast(`Payment dispersal of ${formatCurrency(payment)} recorded for Bill ${id}.`, () => {
        setVendorBills(prevBills);
     });
   };
@@ -243,6 +253,42 @@ export default function ProcureToPayHub() {
   if (activeTab === 'GOODS_RECEIPT') activeData = goodsReceipts;
   if (activeTab === 'VENDOR_BILLS') activeData = vendorBills;
 
+  // Apply Filter
+  const filteredData = activeData.filter(doc => {
+    const matchesStatus = filterStatus === 'All Statuses' || doc.status === filterStatus.toUpperCase();
+    const matchesSearch = doc.client.toLowerCase().includes(searchQuery.toLowerCase()) || doc.id.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
+
+  // Pagination Logic
+  const itemsPerPage = 8;
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  const handleExport = () => {
+    const headers = ['ID', 'Vendor', 'Date', 'Amount', 'Status'];
+    const data = filteredData.map(d => ({
+      id: d.id,
+      vendor: d.client,
+      date: d.date,
+      amount: d.amount,
+      status: d.status
+    }));
+    exportToCSV(`BizzCount_${activeTab.toLowerCase()}_export.csv`, headers, data);
+  };
+
+  const handleImportTrigger = () => {
+    triggerImport((file) => {
+      triggerToast(`Successfully imported records from ${file.name}. Processing...`, () => {});
+    });
+  };
+
   return (
     <div className={styles.container}>
       {/* Undo Toast Notification */}
@@ -271,10 +317,10 @@ export default function ProcureToPayHub() {
         </div>
         
         <div className={styles.headerActions}>
-          <button className={styles.exportBtn}>
+          <button className={styles.exportBtn} onClick={handleImportTrigger}>
             <Upload size={16} /> Import
           </button>
-          <button className={styles.exportBtn}>
+          <button className={styles.exportBtn} onClick={handleExport}>
             <Download size={16} /> Export
           </button>
           <button className={styles.addBtn} onClick={handleNewDocument}>
@@ -325,13 +371,16 @@ export default function ProcureToPayHub() {
             {payableSummary.map((item) => (
               <div key={item.bucket} className={styles.agingCard}>
                  <div className={styles.agingBucketLabel}>{item.bucket}</div>
-                 <div className={styles.agingAmount}>${item.amount.toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
+                 <div className={styles.agingAmount}>{formatCurrency(item.amount)}</div>
                  <div className={styles.agingBarBg}>
                    <div className={styles.agingBarFill} style={{ width: `${item.percentage}%`, backgroundColor: item.color }}></div>
                  </div>
-                 <div className={styles.agingPercentage}>{item.percentage}% of total</div>
+                 <div className={styles.agingPercentage}>{item.percentage}% dari total</div>
               </div>
             ))}
+            {payableSummary.length === 0 && (
+              <div style={{ color: '#64748b', fontSize: '13px', padding: '16px' }}>Tidak ada hutang yang outstanding.</div>
+            )}
           </div>
         </div>
       )}
@@ -342,7 +391,7 @@ export default function ProcureToPayHub() {
           <div className={styles.filterGroup}>
             <div className={styles.selectWrapper}>
               <span className={styles.selectLabel}>STATUS:</span>
-              <select className={styles.selectInput}>
+              <select className={styles.selectInput} value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                 <option>All Statuses</option>
                 {activeTab === 'REQUISITION' && <><option>Draft</option><option>Pending</option><option>Cancelled</option></>}
                 {activeTab === 'PURCHASE_ORDERS' && <><option>Approved</option><option>Cancelled</option></>}
@@ -378,7 +427,7 @@ export default function ProcureToPayHub() {
             </tr>
           </thead>
           <tbody>
-            {activeData.map((doc) => (
+            {paginatedData.map((doc) => (
               <tr key={doc.id} className={doc.status === 'CANCELLED' ? styles.cancelled : ''}>
                 <td><span className={styles.invoiceId}>{doc.id}</span></td>
                 <td>
@@ -391,15 +440,15 @@ export default function ProcureToPayHub() {
                 </td>
                 <td><span className={styles.dateText}>{doc.date}</span></td>
                 <td>
-                  <span className={styles.amountText}>{doc.amount}</span>
+                  <span className={styles.amountText}>{formatCurrency(doc.amount)}</span>
                   {(doc as any).paidAmount > 0 && doc.status !== 'PAID' && (
                     <div style={{ fontSize: '0.65rem', color: '#10B981', marginTop: '2px', fontWeight: 600 }}>
-                       Dispersed: ${(doc as any).paidAmount.toLocaleString('en-US', {minimumFractionDigits: 2})}
+                       Dispersed: {formatCurrency((doc as any).paidAmount)}
                     </div>
                   )}
                   {(doc as any).paidAmount > 0 && doc.status !== 'PAID' && (
                     <div style={{ fontSize: '0.65rem', color: '#EF4444', marginTop: '2px', fontWeight: 600 }}>
-                       Due: ${(parseFloat(doc.amount.replace(/[^0-9.-]+/g, "")) - (doc as any).paidAmount).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                       Due: {formatCurrency((doc.amount as number) - (doc as any).paidAmount)}
                     </div>
                   )}
                 </td>
@@ -433,7 +482,7 @@ export default function ProcureToPayHub() {
                         </button>
                       )}
                       {activeTab === 'VENDOR_BILLS' && (
-                         <button className={styles.actionPipelineBtnOutline} onClick={() => handleRecordPayment(doc.id, doc.amount)}>
+                         <button className={styles.actionPipelineBtnOutline} onClick={() => handleRecordPayment(doc.id, doc.amount as number)}>
                            Pay Vendor
                          </button>
                       )}
@@ -458,23 +507,47 @@ export default function ProcureToPayHub() {
                 </td>
               </tr>
             ))}
-            {activeData.length === 0 && (
+            {filteredData.length === 0 && (
               <tr>
                  <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>
-                    No records found in this pipeline stage.
+                    No records found matching your current filters.
                  </td>
               </tr>
             )}
           </tbody>
         </table>
         
-        {activeData.length > 0 && (
+        {filteredData.length > 0 && (
           <div className={styles.pagination}>
-            <span className={styles.showingText}>Showing 1 to {activeData.length} records</span>
+            <span className={styles.showingText}>
+              Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredData.length)} of {filteredData.length} records
+            </span>
             <div className={styles.pageNumbers}>
-               <button className={styles.pageBtn}>&lt;</button>
-               <button className={`${styles.pageBtn} ${styles.activePage}`}>1</button>
-               <button className={styles.pageBtn}>&gt;</button>
+               <button 
+                 className={`${styles.pageBtn} ${currentPage === 1 ? styles.btnDisabled : ''}`} 
+                 onClick={() => handlePageChange(currentPage - 1)}
+                 disabled={currentPage === 1}
+               >
+                 &lt;
+               </button>
+               
+               {[...Array(totalPages)].map((_, i) => (
+                 <button 
+                   key={i + 1}
+                   className={`${styles.pageBtn} ${currentPage === i + 1 ? styles.activePage : ''}`}
+                   onClick={() => handlePageChange(i + 1)}
+                 >
+                   {i + 1}
+                 </button>
+               ))}
+
+               <button 
+                 className={`${styles.pageBtn} ${currentPage === totalPages ? styles.btnDisabled : ''}`} 
+                 onClick={() => handlePageChange(currentPage + 1)}
+                 disabled={currentPage === totalPages}
+               >
+                 &gt;
+               </button>
             </div>
           </div>
         )}

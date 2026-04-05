@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^5.22.0",
     "bcryptjs": "^3.0.3",
     "jspdf": "^4.2.1",
@@ -16,11 +17,15 @@
     "lucide-react": "^1.0.1",
     "next": "16.2.1",
     "next-auth": "^4.24.13",
+    "openai": "^6.33.0",
     "prisma": "^5.22.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-markdown": "^10.1.0",
     "recharts": "^3.8.0",
-    "xlsx": "^0.18.5"
+    "remark-gfm": "^4.0.1",
+    "xlsx": "^0.18.5",
+    "xmlbuilder2": "^4.0.3"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

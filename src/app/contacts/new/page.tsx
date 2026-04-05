@@ -18,12 +18,12 @@ export default function NewContact() {
     phone: '',
     website: '',
     role: 'Customer', // Customer, Vendor, Employee
-    currency: 'USD',
+    currency: 'IDR',
     paymentTerms: 'Due on Receipt',
     address: '',
     city: '',
     postalCode: '',
-    country: 'United States'
+    country: 'Indonesia'
   });
 
   const [showToast, setShowToast] = useState(false);
@@ -216,8 +216,8 @@ export default function NewContact() {
                   value={formData.currency}
                   onChange={(e) => handleChange('currency', e.target.value)}
                 >
+                  <option value="IDR">IDR - Rupiah Indonesia</option>
                   <option value="USD">USD - US Dollar</option>
-                  <option value="IDR">IDR - Indonesian Rupiah</option>
                   <option value="EUR">EUR - Euro</option>
                 </select>
               </div>
@@ -283,8 +283,8 @@ export default function NewContact() {
                 value={formData.country}
                 onChange={(e) => handleChange('country', e.target.value)}
               >
-                <option value="United States">United States</option>
                 <option value="Indonesia">Indonesia</option>
+                <option value="United States">United States</option>
                 <option value="Singapore">Singapore</option>
                 <option value="United Kingdom">United Kingdom</option>
               </select>

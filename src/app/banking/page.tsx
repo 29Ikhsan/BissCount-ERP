@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Landmark, UploadCloud, Link as LinkIcon, CheckCircle2, AlertCircle, RefreshCw, XCircle } from 'lucide-react';
+import { Landmark, UploadCloud, Link as LinkIcon, CheckCircle2, AlertCircle, RefreshCw, XCircle, Check, Sparkles } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 import styles from './page.module.css';
 
 // --- Dummy Data ---
 const bankAccounts = [
-  { id: '1', name: 'BCA Corporate', number: 'XXXX-XXXX-8991', type: 'Checking', balance: 145000, lastSynced: '5 mins ago', status: 'Connected' },
-  { id: '2', name: 'Mandiri Payroll', number: 'XXXX-XXXX-3342', type: 'Checking', balance: 52000, lastSynced: '1 hr ago', status: 'Connected' },
-  { id: '3', name: 'Stripe USD', number: 'us_acct_889F', type: 'Payment Gateway', balance: 28450, lastSynced: '12 hrs ago', status: 'Requires Auth' },
+  { id: '1', name: 'BCA Corporate', number: 'XXXX-XXXX-8991', type: 'Checking', balance: 145000000, lastSynced: '5 mins ago', status: 'Connected' },
+  { id: '2', name: 'Mandiri Payroll', number: 'XXXX-XXXX-3342', type: 'Checking', balance: 52000000, lastSynced: '1 hr ago', status: 'Connected' },
+  { id: '3', name: 'Stripe IDR', number: 'IDR_acct_889F', type: 'Payment Gateway', balance: 28450000, lastSynced: '12 hrs ago', status: 'Requires Auth' },
 ];
 
 const reconciliationLines = [
@@ -49,23 +50,50 @@ const reconciliationLines = [
 export default function Banking() {
   const [activeTab, setActiveTab] = useState('reconcile');
   const [activeAccountId, setActiveAccountId] = useState('1');
+  const { t, formatCurrency } = useLanguage();
   const [bankAccountsList, setBankAccountsList] = useState<any[]>([]);
   const [reconciliationList, setReconciliationList] = useState<any[]>([]);
+  const [costCenters, setCostCenters] = useState<any[]>([]);
   const [totalCash, setTotalCash] = useState(0);
+  const [toast, setToast] = useState<{ visible: boolean, message: string } | null>(null);
+
+  const triggerToast = (message: string) => {
+    setToast({ visible: true, message });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   useEffect(() => {
     const fetchBanking = async () => {
       try {
-        const res = await fetch('/api/banking');
-        const data = await res.json();
-        if (data.accounts && data.accounts.length > 0) {
-           setBankAccountsList(data.accounts);
-           setActiveAccountId(data.accounts[0].id);
-           const total = data.accounts.reduce((sum: number, acc: any) => sum + acc.balance, 0);
+        const [bankRes, ccRes] = await Promise.all([
+          fetch('/api/banking'),
+          fetch('/api/cost-centers')
+        ]);
+        const bankData = await bankRes.json();
+        const ccData = await ccRes.json();
+
+        if (bankData.accounts && bankData.accounts.length > 0) {
+           setBankAccountsList(bankData.accounts);
+           setActiveAccountId(bankData.accounts[0].id);
+           const total = bankData.accounts.reduce((sum: number, acc: any) => sum + acc.balance, 0);
            setTotalCash(total);
+        } else {
+          // Fallback: show COA asset accounts with placeholder info
+          setBankAccountsList([{
+            id: 'setup',
+            name: 'Belum ada akun bank terhubung',
+            number: '—',
+            type: 'Setup Needed',
+            balance: 0,
+            lastSynced: '—',
+            status: 'Setup'
+          }]);
         }
-        if (data.reconciliationLines) {
-           setReconciliationList(data.reconciliationLines);
+        if (bankData.reconciliationLines) {
+           setReconciliationList(bankData.reconciliationLines);
+        }
+        if (ccData.costCenters) {
+           setCostCenters(ccData.costCenters);
         }
       } catch (err) {
         console.error('Fetch banking failed', err);
@@ -74,42 +102,146 @@ export default function Banking() {
     fetchBanking();
   }, []);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
-  };
 
   const getMatchIcon = (match: any) => {
     if (!match) return <AlertCircle size={16} className={styles.iconWarning} />;
     if (match.type === 'exact') return <CheckCircle2 size={16} className={styles.iconSuccess} />;
-    if (match.type === 'suggested') return <SparklesIcon />;
+    if (match.type === 'suggested') return <Sparkles size={16} className={styles.iconSuccess} />;
     return null;
   };
 
-  const SparklesIcon = () => <span style={{ color: '#8B5CF6' }}>✨</span>;
+  const handleMatch = async (id: string) => {
+    const line = reconciliationList.find(l => l.id === id);
+    if (!line) return;
+
+    try {
+      const res = await fetch('/api/banking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          lineId: id, 
+          targetId: line.match?.bizzcountId,
+          costCenterId: line.selectedCC,
+          action: 'reconcile' 
+        })
+      });
+      
+      if (res.ok) {
+        const ccTag = line.selectedCC ? ` tagged to Cost Center` : '';
+        setReconciliationList(reconciliationList.filter(item => item.id !== id));
+        triggerToast(`Transaction reconciled and mapped to ledger${ccTag}.`);
+        
+        // Refresh account balances
+        const bankRes = await fetch('/api/banking');
+        const bankData = await bankRes.json();
+        if (bankData.accounts) setBankAccountsList(bankData.accounts);
+      } else {
+        alert("Failed to reconcile transaction in database.");
+      }
+    } catch (e) {
+      alert("Network error during reconciliation.");
+    }
+  };
+
+  const handleCCSelect = (lineId: string, ccId: string) => {
+    setReconciliationList(reconciliationList.map(line => 
+      line.id === lineId ? { ...line, selectedCC: ccId } : line
+    ));
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const text = e.target?.result as string;
+      const lines = text.split('\n').filter(l => l.trim());
+      // Skip header, assuming Date,Description,Amount format
+      const csvData = lines.slice(1).map(line => {
+        const [date, description, amount] = line.split(',');
+        return { date, description, amount };
+      });
+
+      try {
+        const res = await fetch('/api/banking/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accountId: activeAccountId, csvLines: csvData })
+        });
+        const data = await res.json();
+        if (data.success) {
+          triggerToast(`Successfully imported ${data.count} transaction lines!`);
+          // Refresh list
+          const bankRes = await fetch('/api/banking');
+          const bankData = await bankRes.json();
+          if (bankData.reconciliationLines) setReconciliationList(bankData.reconciliationLines);
+        }
+      } catch (err) {
+        triggerToast("Failed to import statement.");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleSimulateFeed = async () => {
+    triggerToast(t('ConnectingBankPortal') || "Simulation: Connecting to secure bank portal via API...");
+    try {
+      const res = await fetch('/api/banking/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountId: activeAccountId })
+      });
+      if (res.ok) {
+        setTimeout(async () => {
+          triggerToast(t('BankFeedSynced') || "Bank feed securely synced.");
+          // Refresh list
+          const bankRes = await fetch('/api/banking');
+          const bankData = await bankRes.json();
+          if (bankData.reconciliationLines) setReconciliationList(bankData.reconciliationLines);
+        }, 1500);
+      }
+    } catch(e) {
+      triggerToast(t('BankFeedError') || "Failed to sync bank feed.");
+    }
+  };
 
   return (
     <div className={styles.container}>
+      <input 
+        type="file" 
+        id="bank-import-input" 
+        style={{ display: 'none' }} 
+        accept=".csv"
+        onChange={handleFileUpload}
+      />
       {/* Header */}
       <div className={styles.header}>
         <div>
-          <h1 className={styles.pageTitle}>Cash & Bank</h1>
-          <p className={styles.pageSubtitle}>Manage connected bank feeds and perform automated ledger reconciliation.</p>
+          <h1 className={styles.pageTitle}>{t('BankingReconciliation')}</h1>
+          <p className={styles.pageSubtitle}>{t('CashReconSubtitle')}</p>
         </div>
         <div className={styles.headerActions}>
-           <button className={styles.btnOutline}>
-            <UploadCloud size={16} /> Import Statement
+           <button className={styles.btnOutline} onClick={() => document.getElementById('bank-import-input')?.click()}>
+            <UploadCloud size={16} /> {t('ImportStatement') || "Import Statement"}
            </button>
-           <button className={styles.btnPrimary}>
-            <LinkIcon size={16} /> Connect Bank Feed
+           <button className={styles.btnPrimary} onClick={handleSimulateFeed}>
+            <LinkIcon size={16} /> {t('ConnectBankFeed') || "Connect Bank Feed"}
            </button>
         </div>
       </div>
+
+      {toast?.visible && (
+        <div style={{ position: 'fixed', top: '20px', right: '20px', backgroundColor: '#10B981', color: 'white', padding: '12px 24px', borderRadius: '8px', zIndex: 1000, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Check size={18} /> {toast.message}
+        </div>
+      )}
 
       <div className={styles.contentGrid}>
         {/* Left Column: Bank Accounts */}
         <div className={styles.leftCol}>
           <div className={styles.cardHeaderRow}>
-            <h3 className={styles.sectionTitle}>Connected Accounts</h3>
+            <h3 className={styles.sectionTitle}>{t('ConnectedAccounts')}</h3>
           </div>
           
           <div className={styles.accountsList}>
@@ -142,13 +274,13 @@ export default function Banking() {
             ))}
             {bankAccountsList.length === 0 && (
               <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
-                No Bank/Cash accounts found. Import COA settings first.
+                {t('NoBankAccounts') || "No Bank/Cash accounts found. Import COA settings first."}
               </div>
             )}
           </div>
 
           <div className={styles.summaryCard}>
-            <div className={styles.summaryLabel}>TOTAL CASH & EQUIVALENTS</div>
+            <div className={styles.summaryLabel}>{t('TotalBalance')}</div>
             <div className={styles.summaryValue}>{formatCurrency(totalCash)}</div>
           </div>
         </div>
@@ -159,8 +291,8 @@ export default function Banking() {
             {/* Workspace Header & Tabs */}
             <div className={styles.workspaceHeader}>
               <div className={styles.workspaceTitleGroup}>
-                <h2 className={styles.workspaceTitle}>Ledger Reconciliation Workspace</h2>
-                <span className={styles.badgeOrange}>{reconciliationList.length} Unreconciled</span>
+                <h2 className={styles.workspaceTitle}>{t('BankingReconciliation')}</h2>
+                <span className={styles.badgeOrange}>{reconciliationList.length} {t('Unreconciled')}</span>
               </div>
               
               <div className={styles.tabsContainer}>
@@ -168,19 +300,19 @@ export default function Banking() {
                   className={`${styles.tabBtn} ${activeTab === 'reconcile' ? styles.tabActive : ''}`}
                   onClick={() => setActiveTab('reconcile')}
                 >
-                  To Reconcile
+                  {t('ToReconcile')}
                 </button>
                 <button 
                   className={`${styles.tabBtn} ${activeTab === 'rules' ? styles.tabActive : ''}`}
                   onClick={() => setActiveTab('rules')}
                 >
-                  Bank Rules
+                  {t('BankRules')}
                 </button>
                 <button 
                   className={`${styles.tabBtn} ${activeTab === 'statement' ? styles.tabActive : ''}`}
                   onClick={() => setActiveTab('statement')}
                 >
-                  Bank Statement
+                  {t('BankStatement')}
                 </button>
               </div>
             </div>
@@ -189,8 +321,8 @@ export default function Banking() {
             {activeTab === 'reconcile' && (
               <div className={styles.feedContainer}>
                 <div className={styles.feedHeaderRow}>
-                  <div className={styles.feedColBank}>BANK STATEMENT LINE</div>
-                  <div className={styles.feedColMatch}>BIZZCOUNT MATCH / ACTION</div>
+                  <div className={styles.feedColBank}>{t('BankStatementLine') || "BANK STATEMENT LINE"}</div>
+                  <div className={styles.feedColMatch}>{t('BizzcountMatch') || "BIZZCOUNT MATCH / ACTION"}</div>
                 </div>
 
                 <div className={styles.feedList}>
@@ -215,19 +347,34 @@ export default function Banking() {
                                 {line.match.type === 'exact' ? 'Exact Match' : 'AI Suggested Match'}
                               </div>
                               <div className={styles.matchRef}>{line.match.bizzcountRef}</div>
-                              <div className={styles.matchId}>{line.match.bizzcountId}</div>
+                              {line.match.accountName && (
+                                <div className={styles.matchAccount}>Mapped to: {line.match.accountName}</div>
+                              )}
+                              <div className={styles.matchId}>Reference: {line.match.bizzcountId.slice(0, 8)}</div>
                             </div>
                             <div className={styles.matchActions}>
-                              <button className={styles.btnMatch}>OK</button>
+                              <button className={styles.btnMatch} onClick={() => handleMatch(line.id)}>OK</button>
                             </div>
                           </div>
                         ) : (
                           <div className={styles.unmatchedBox}>
-                            <div className={styles.unmatchedText}>No exact match found in ledger.</div>
-                            <div className={styles.unmatchedActions}>
-                               <button className={styles.btnCreate}>Create Transaction</button>
-                               <button className={styles.btnFind}>Find Match</button>
-                               <button className={styles.btnTransfer}>Transfer</button>
+                            <div className={styles.unmatchedText}>{t('NoExactMatch') || "No exact match found in ledger."}</div>
+                            <div className={styles.unmatchedActions} style={{ flexDirection: 'column', gap: '8px' }}>
+                               <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                                 <button className={styles.btnCreate} onClick={() => triggerToast("Opening Quick-Create Ledger Entry form.")}>{t('CreateTransaction') || "Create Transaction"}</button>
+                                 <button className={styles.btnFind} onClick={() => triggerToast("Searching entire GL history for potential matches.")}>{t('FindMatch') || "Find Match"}</button>
+                               </div>
+                               <select 
+                                 className={styles.tabBtn} 
+                                 style={{ fontSize: '0.75rem', width: '100%', padding: '4px' }}
+                                 value={line.selectedCC || ''}
+                                 onChange={(e) => handleCCSelect(line.id, e.target.value)}
+                               >
+                                 <option value="">-- Apply Cost Center --</option>
+                                 {costCenters.map(cc => (
+                                   <option key={cc.id} value={cc.id}>{cc.code} - {cc.name}</option>
+                                 ))}
+                               </select>
                             </div>
                           </div>
                         )}
@@ -236,7 +383,7 @@ export default function Banking() {
                   ))}
                   {reconciliationList.length === 0 && (
                     <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
-                      Everything is up to date and reconciled perfectly!
+                      {t('EverythingReconciled') || "Everything is up to date and reconciled perfectly!"}
                     </div>
                   )}
                 </div>

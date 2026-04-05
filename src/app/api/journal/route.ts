@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { ensurePeriodOpen } from '@/lib/periodGuard'
 
 export async function POST(req: Request) {
   try {
@@ -16,6 +17,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'System Error: No Master Tenant Found' }, { status: 500 })
     }
 
+    // 1. Check Period Lock
+    const journalDate = new Date(date || Date.now());
+    await ensurePeriodOpen(journalDate, tenant.id)
+
     // Calculate Totals to verify accounting equation Debit = Credit
     const totalDebit = lines.reduce((sum: number, line: any) => sum + (parseFloat(line.debit) || 0), 0)
     const totalCredit = lines.reduce((sum: number, line: any) => sum + (parseFloat(line.credit) || 0), 0)
@@ -29,7 +34,7 @@ export async function POST(req: Request) {
       
       const journalEntry = await tx.journalEntry.create({
         data: {
-          date: new Date(date || Date.now()),
+          date: journalDate,
           description,
           reference: reference || null,
           tenantId: tenant.id
@@ -45,7 +50,8 @@ export async function POST(req: Request) {
             journalEntryId: journalEntry.id,
             accountId: line.accountId,
             debit,
-            credit
+            credit,
+            ...(line.costCenterId ? { costCenterId: line.costCenterId } : {})
           }
         })
 
@@ -69,9 +75,9 @@ export async function POST(req: Request) {
     })
 
     return NextResponse.json({ success: true, journal: newJournal }, { status: 201 })
-  } catch (error) {
+  } catch (error: any) {
     console.error('[Create Journal Error]:', error)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 })
   }
 }
 

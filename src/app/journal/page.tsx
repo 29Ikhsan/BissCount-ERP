@@ -4,17 +4,22 @@ import { useState, useEffect } from 'react';
 import { Plus, Save, Trash2, HelpCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function ManualJournal() {
   const router = useRouter();
+  const { formatCurrency } = useLanguage();
   const [chartOfAccounts, setChartOfAccounts] = useState<any[]>([]);
+  const [costCenters, setCostCenters] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    fetch('/api/accounts')
-      .then(res => res.json())
-      .then(data => {
-        if (data.accounts) setChartOfAccounts(data.accounts);
+    Promise.all([
+      fetch('/api/accounts').then(res => res.json()),
+      fetch('/api/cost-centers').then(res => res.json())
+    ]).then(([accountsData, ccData]) => {
+        if (accountsData.accounts) setChartOfAccounts(accountsData.accounts);
+        if (ccData.costCenters) setCostCenters(ccData.costCenters);
       });
   }, []);
   const [formData, setFormData] = useState({
@@ -24,12 +29,12 @@ export default function ManualJournal() {
   });
 
   const [lines, setLines] = useState([
-    { id: 1, accountId: '', description: '', debit: 0, credit: 0 },
-    { id: 2, accountId: '', description: '', debit: 0, credit: 0 }
+    { id: 1, accountId: '', costCenterId: '', description: '', debit: 0, credit: 0 },
+    { id: 2, accountId: '', costCenterId: '', description: '', debit: 0, credit: 0 }
   ]);
 
   const addLine = () => {
-    setLines([...lines, { id: Date.now(), accountId: '', description: '', debit: 0, credit: 0 }]);
+    setLines([...lines, { id: Date.now(), accountId: '', costCenterId: '', description: '', debit: 0, credit: 0 }]);
   };
 
   const removeLine = (id: number) => {
@@ -76,6 +81,7 @@ export default function ManualJournal() {
         reference: formData.reference,
         lines: lines.map(line => ({
           accountId: line.accountId,
+          costCenterId: line.costCenterId || undefined,
           debit: line.debit,
           credit: line.credit
         }))
@@ -167,10 +173,11 @@ export default function ManualJournal() {
             <table className={styles.linesTable}>
               <thead>
                 <tr>
-                  <th style={{ width: '30%' }}>ACCOUNT</th>
-                  <th style={{ width: '35%' }}>DESCRIPTION</th>
-                  <th style={{ width: '15%' }} className={styles.textRight}>DEBITS</th>
-                  <th style={{ width: '15%' }} className={styles.textRight}>CREDITS</th>
+                  <th style={{ width: '25%' }}>ACCOUNT</th>
+                  <th style={{ width: '25%' }}>DESCRIPTION</th>
+                  <th style={{ width: '20%' }}>COST CENTER</th>
+                  <th style={{ width: '12.5%' }} className={styles.textRight}>DEBITS</th>
+                  <th style={{ width: '12.5%' }} className={styles.textRight}>CREDITS</th>
                   <th style={{ width: '5%' }}></th>
                 </tr>
               </thead>
@@ -198,6 +205,18 @@ export default function ManualJournal() {
                         onChange={(e) => updateLine(line.id, 'description', e.target.value)}
                         className={styles.inputField} 
                       />
+                    </td>
+                    <td>
+                      <select 
+                        value={line.costCenterId}
+                        onChange={(e) => updateLine(line.id, 'costCenterId', e.target.value)}
+                        className={styles.inputField}
+                      >
+                        <option value="">-- No Tag --</option>
+                        {costCenters.map(cc => (
+                          <option key={cc.id} value={cc.id}>{cc.code}</option>
+                        ))}
+                      </select>
                     </td>
                     <td>
                       <input 
@@ -247,17 +266,17 @@ export default function ManualJournal() {
               <div className={styles.totalsBox}>
                 <div className={styles.totalRow}>
                   <span className={styles.totalLabel}>Total Debits:</span>
-                  <span className={styles.totalAmount}>${totalDebit.toFixed(2)}</span>
+                  <span className={styles.totalAmount}>{formatCurrency(totalDebit)}</span>
                 </div>
                 <div className={styles.totalRow}>
                   <span className={styles.totalLabel}>Total Credits:</span>
-                  <span className={styles.totalAmount}>${totalCredit.toFixed(2)}</span>
+                  <span className={styles.totalAmount}>{formatCurrency(totalCredit)}</span>
                 </div>
                 
                 {!isBalanced && (totalDebit > 0 || totalCredit > 0) && (
                   <div className={styles.differenceRow}>
                     <span className={styles.differenceLabel}>Out of balance by:</span>
-                    <span className={styles.differenceAmount}>${difference.toFixed(2)}</span>
+                    <span className={styles.differenceAmount}>{formatCurrency(difference)}</span>
                   </div>
                 )}
                 

@@ -1,0 +1,604 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id                    String                @id @default(uuid())
+  name                  String
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  address               String?
+  fiscalYear            String?               @default("January to December")
+  logoUrl               String?
+  taxId                 String?
+  inventoryMethod       String                @default("AVERAGE")
+  accounts              Account[]
+  auditLogs             AuditLog[]
+  bankStatements        BankStatement[]
+  closedPeriods         ClosedPeriod[]
+  contacts              Contact[]
+  costCenters           CostCenter[]
+  currencies            Currency[]
+  depreciationHistories DepreciationHistory[]
+  depreciationRuns      DepreciationRun[]
+  employees             Employee[]
+  expenses              Expense[]
+  fixedAssets           FixedAsset[]
+  inventoryLevels       InventoryLevel[]
+  invoices              Invoice[]
+  journalEntries        JournalEntry[]
+  leads                 Lead[]
+  marketingCampaigns    MarketingCampaign[]
+  opportunities         Opportunity[]
+  payrolls              Payroll[]
+  products              Product[]
+  productionOrders      ProductionOrder[]
+  purchaseOrders        PurchaseOrder[]
+  taxes                 Tax[]
+  taxKnowledge          TaxKnowledge[]
+  users                 User[]
+  warehouses            Warehouse[]
+}
+
+model User {
+  id               String     @id @default(uuid())
+  email            String     @unique
+  name             String
+  password         String
+  role             String     @default("USER")
+  tenantId         String
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  avatarUrl        String?    @default("https://i.pravatar.cc/150?u=alex")
+  jobTitle         String?    @default("Senior Financial Controller")
+  notifications    Json?      @default("{\"system\": {\"sms\": true, \"push\": true, \"email\": true}, \"financial\": {\"sms\": false, \"push\": true, \"email\": true}, \"operations\": {\"sms\": false, \"push\": false, \"email\": true}}")
+  timezone         String?    @default("Eastern Standard Time (EST) - GMT-5")
+  auditLogs        AuditLog[]
+  expensesApproved Expense[]  @relation("ExpenseApprover")
+  tenant           Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model Contact {
+  id                String          @id @default(uuid())
+  type              String
+  role              String          @default("Customer")
+  name              String
+  email             String?
+  phone             String?
+  website           String?
+  currency          String          @default("USD")
+  paymentTerms      String          @default("Due on Receipt")
+  address           String?
+  city              String?
+  postalCode        String?
+  country           String?
+  taxId             String?
+  idType            String?         @default("NPWP")
+  idNumber          String?
+  tkuId             String?         @default("0000000000000000000000")
+  tenantId          String
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  tenant            Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  expenses          Expense[]       @relation("ExpenseMerchant")
+  invoices          Invoice[]
+  opportunities     Opportunity[]
+  preferredProducts Product[]       @relation("PreferredSupplier")
+  purchaseOrders    PurchaseOrder[]
+}
+
+model Account {
+  id             String          @id @default(uuid())
+  code           String
+  name           String
+  type           String
+  balance        Float           @default(0)
+  tenantId       String
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bankStatements BankStatement[]
+  expenseItems   ExpenseItem[]
+  journalLines   JournalLine[]
+  taxes          Tax[]
+
+  @@unique([code, tenantId])
+}
+
+model JournalEntry {
+  id                 String              @id @default(uuid())
+  date               DateTime
+  description        String
+  reference          String?
+  tenantId           String
+  bankStatementLines BankStatementLine[]
+  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lines              JournalLine[]
+}
+
+model JournalLine {
+  id             String       @id @default(uuid())
+  journalEntryId String
+  accountId      String
+  debit          Float        @default(0)
+  credit         Float        @default(0)
+  costCenterId   String?
+  account        Account      @relation(fields: [accountId], references: [id])
+  costCenter     CostCenter?  @relation(fields: [costCenterId], references: [id])
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+}
+
+model CostCenter {
+  id             String          @id @default(uuid())
+  code           String
+  name           String
+  budget         Float           @default(0)
+  tenantId       String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  expenses       Expense[]
+  invoices       Invoice[]
+  journalLines   JournalLine[]
+  purchaseOrders PurchaseOrder[]
+
+  @@unique([code, tenantId])
+}
+
+model Invoice {
+  id               String        @id @default(uuid())
+  invoiceNo        String
+  clientName       String
+  date             DateTime
+  dueDate          DateTime
+  amount           Float
+  status           String        @default("PENDING")
+  tenantId         String
+  contactId        String?
+  costCenterId     String?
+  discountAmount   Float         @default(0)
+  grandTotal       Float         @default(0)
+  taxAmount        Float         @default(0)
+  paidAmount       Float         @default(0)
+  taxPeriod        Int           @default(0)
+  taxYear          Int           @default(0)
+  fakturStatus     String        @default("NORMAL")
+  fakturType       String        @default("Normal")
+  transactionCode  String        @default("01")
+  additionalInfo   String?
+  supportDoc       String?
+  supportDocPeriod String?
+  facilityCap      String?
+  sellerTkuId      String?       @default("0000000000000000000000")
+  contact          Contact?      @relation(fields: [contactId], references: [id])
+  costCenter       CostCenter?   @relation(fields: [costCenterId], references: [id])
+  tenant           Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  items            InvoiceItem[]
+}
+
+model InvoiceItem {
+  id             String   @id @default(uuid())
+  invoiceId      String
+  productId      String?
+  sku            String?  @default("000000")
+  description    String
+  quantity       Int
+  unitPrice      Float
+  total          Float
+  taxAmount      Float    @default(0)
+  taxId          String?
+  taxRate        Float    @default(0)
+  itemType       String   @default("A")
+  uomCode        String   @default("UM.0002")
+  baseValueOther Float    @default(0)
+  ppnRate        Float    @default(12)
+  ppnbmRate      Float    @default(0)
+  ppnbmAmount    Float    @default(0)
+  invoice        Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product        Product? @relation(fields: [productId], references: [id])
+  tax            Tax?     @relation(fields: [taxId], references: [id])
+}
+
+model Expense {
+  id           String        @id @default(uuid())
+  date         DateTime
+  merchant     String
+  category     String
+  amount       Float
+  status       String        @default("PENDING")
+  employeeName String?
+  receiptUrl   String?
+  approverId   String?
+  tenantId     String
+  costCenterId String?
+  grandTotal   Float         @default(0)
+  taxAmount    Float         @default(0)
+  taxPeriod    Int           @default(0)
+  taxYear      Int           @default(0)
+  contactId    String?
+  approver     User?         @relation("ExpenseApprover", fields: [approverId], references: [id])
+  contact      Contact?      @relation("ExpenseMerchant", fields: [contactId], references: [id])
+  costCenter   CostCenter?   @relation(fields: [costCenterId], references: [id])
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  items        ExpenseItem[]
+}
+
+model ExpenseItem {
+  id            String   @id @default(uuid())
+  expenseId     String
+  accountId     String?
+  description   String
+  amount        Float
+  taxId         String?
+  taxRate       Float    @default(0)
+  taxAmount     Float    @default(0)
+  whtRate       Float    @default(0)
+  whtAmount     Float    @default(0)
+  total         Float
+  taxObjectCode String?
+  tkuId         String?  @default("0000000000000000000000")
+  workerStatus  String?  @default("Resident")
+  position      String?
+  ptkpStatus    String?  @default("TK/0")
+  passportNo    String?
+  facilityCap   String?  @default("N/A")
+  account       Account? @relation(fields: [accountId], references: [id])
+  expense       Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  tax           Tax?     @relation(fields: [taxId], references: [id])
+}
+
+model Product {
+  id                  String              @id @default(uuid())
+  sku                 String
+  name                String
+  category            String
+  price               Float
+  cost                Float               @default(0)
+  tenantId            String
+  preferredSupplierId String?
+  taxId               String?
+  finishedBOMItems    BOMItem[]           @relation("FinishedProductBOM")
+  rawBOMItems         BOMItem[]           @relation("RawMaterialBOM")
+  inventoryLevels     InventoryLevel[]
+  invoiceItems        InvoiceItem[]
+  preferredSupplier   Contact?            @relation("PreferredSupplier", fields: [preferredSupplierId], references: [id])
+  tax                 Tax?                @relation(fields: [taxId], references: [id])
+  tenant              Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  productionOrders    ProductionOrder[]
+  purchaseOrderItems  PurchaseOrderItem[]
+  stockBatches        StockBatch[]
+
+  @@unique([sku, tenantId])
+}
+
+model Warehouse {
+  id               String            @id @default(uuid())
+  name             String
+  location         String?
+  tenantId         String
+  inventoryLevels  InventoryLevel[]
+  productionOrders ProductionOrder[]
+  stockBatches     StockBatch[]
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model InventoryLevel {
+  id          String    @id @default(uuid())
+  productId   String
+  warehouseId String
+  quantity    Int       @default(0)
+  minQuantity Int       @default(0)
+  tenantId    String?
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tenant      Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, warehouseId])
+}
+
+model BOMItem {
+  id                String  @id @default(uuid())
+  finishedProductId String
+  rawProductId      String
+  quantityRequired  Float
+  finishedProduct   Product @relation("FinishedProductBOM", fields: [finishedProductId], references: [id], onDelete: Cascade)
+  rawProduct        Product @relation("RawMaterialBOM", fields: [rawProductId], references: [id], onDelete: Cascade)
+}
+
+model ProductionOrder {
+  id          String     @id @default(uuid())
+  orderNo     String
+  status      String     @default("PLANNED")
+  productId   String
+  quantity    Int
+  startDate   DateTime?
+  endDate     DateTime?
+  tenantId    String
+  warehouseId String?
+  product     Product    @relation(fields: [productId], references: [id])
+  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  warehouse   Warehouse? @relation(fields: [warehouseId], references: [id])
+}
+
+model PurchaseOrder {
+  id             String              @id @default(uuid())
+  poNumber       String
+  supplier       String
+  date           DateTime
+  expectedDate   DateTime?
+  status         String              @default("PENDING")
+  tenantId       String
+  amount         Float               @default(0)
+  contactId      String?
+  costCenterId   String?
+  discountAmount Float               @default(0)
+  grandTotal     Float               @default(0)
+  taxAmount      Float               @default(0)
+  type           String              @default("PURCHASE_ORDER")
+  contact        Contact?            @relation(fields: [contactId], references: [id])
+  costCenter     CostCenter?         @relation(fields: [costCenterId], references: [id])
+  tenant         Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  items          PurchaseOrderItem[]
+}
+
+model PurchaseOrderItem {
+  id              String        @id @default(uuid())
+  purchaseOrderId String
+  productId       String?
+  description     String
+  quantity        Int
+  unitPrice       Float
+  taxId           String?
+  taxRate         Float         @default(0)
+  taxAmount       Float         @default(0)
+  total           Float
+  product         Product?      @relation(fields: [productId], references: [id])
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  tax             Tax?          @relation(fields: [taxId], references: [id])
+}
+
+model Currency {
+  id          String   @id
+  name        String
+  rate        Float
+  lastUpdated DateTime @default(now())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([id, tenantId])
+}
+
+model Tax {
+  id                 String              @id @default(uuid())
+  name               String
+  description        String?
+  rate               Float
+  type               String
+  accountId          String?
+  tenantId           String
+  expenseItems       ExpenseItem[]
+  invoiceItems       InvoiceItem[]
+  products           Product[]
+  purchaseOrderItems PurchaseOrderItem[]
+  account            Account?            @relation(fields: [accountId], references: [id])
+  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model BankStatement {
+  id         String              @id @default(uuid())
+  accountId  String
+  importDate DateTime            @default(now())
+  tenantId   String
+  account    Account             @relation(fields: [accountId], references: [id])
+  tenant     Tenant              @relation(fields: [tenantId], references: [id])
+  lines      BankStatementLine[]
+}
+
+model BankStatementLine {
+  id             String        @id @default(uuid())
+  statementId    String
+  date           DateTime
+  description    String
+  amount         Float
+  isReconciled   Boolean       @default(false)
+  reconciledAt   DateTime?
+  journalEntryId String?
+  journalEntry   JournalEntry? @relation(fields: [journalEntryId], references: [id])
+  statement      BankStatement @relation(fields: [statementId], references: [id], onDelete: Cascade)
+}
+
+model FixedAsset {
+  id                    String                @id @default(uuid())
+  name                  String
+  category              String
+  purchaseDate          DateTime
+  cost                  Float
+  residualValue         Float                 @default(0)
+  usefulLife            Int
+  accumulatedDepr       Float                 @default(0)
+  status                String                @default("ACTIVE")
+  tenantId              String
+  depreciationHistories DepreciationHistory[]
+  tenant                Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model ClosedPeriod {
+  id       String   @id @default(uuid())
+  month    String
+  year     Int
+  closedAt DateTime @default(now())
+  closedBy String?
+  tenantId String
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([month, year, tenantId])
+}
+
+model DepreciationRun {
+  id        String                @id @default(uuid())
+  month     Int
+  year      Int
+  runAt     DateTime              @default(now())
+  tenantId  String
+  histories DepreciationHistory[]
+  tenant    Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([month, year, tenantId])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String
+  entity    String
+  entityId  String
+  details   Json?
+  userId    String?
+  tenantId  String
+  createdAt DateTime @default(now())
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id])
+}
+
+model DepreciationHistory {
+  id        String          @id @default(uuid())
+  assetId   String
+  amount    Float
+  month     Int
+  year      Int
+  tenantId  String
+  createdAt DateTime        @default(now())
+  asset     FixedAsset      @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  run       DepreciationRun @relation(fields: [month, year, tenantId], references: [month, year, tenantId])
+  tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model StockBatch {
+  id           String    @id @default(uuid())
+  productId    String
+  warehouseId  String
+  quantity     Int
+  remainingQty Int
+  unitCost     Float
+  createdAt    DateTime  @default(now())
+  product      Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouse    Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+}
+
+model Lead {
+  id            String             @id @default(uuid())
+  name          String
+  email         String?
+  phone         String?
+  company       String?
+  status        String             @default("NEW")
+  source        String?
+  value         Float              @default(0)
+  tenantId      String
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  campaignId    String?
+  campaign      MarketingCampaign? @relation(fields: [campaignId], references: [id])
+  tenant        Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  opportunities Opportunity[]
+}
+
+model Opportunity {
+  id            String    @id @default(uuid())
+  title         String
+  value         Float
+  stage         String    @default("DISCOVERY")
+  probability   Int       @default(10)
+  expectedClose DateTime?
+  contactId     String?
+  leadId        String?
+  tenantId      String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  contact       Contact?  @relation(fields: [contactId], references: [id])
+  lead          Lead?     @relation(fields: [leadId], references: [id])
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model MarketingCampaign {
+  id          String    @id @default(uuid())
+  name        String
+  type        String
+  budget      Float     @default(0)
+  actualSpend Float     @default(0)
+  status      String    @default("ACTIVE")
+  startDate   DateTime?
+  endDate     DateTime?
+  tenantId    String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  leads       Lead[]
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model Employee {
+  id         String    @id @default(uuid())
+  employeeId String
+  name       String
+  email      String?
+  phone      String?
+  department String?
+  jobTitle   String?
+  salary     Float     @default(0)
+  joinDate   DateTime  @default(now())
+  status     String    @default("ACTIVE")
+  ptkpStatus String    @default("TK/0")
+  npwp       String?
+  nik        String?
+  address    String?
+  bankName   String?
+  bankNumber String?
+  bankHolder String?
+  bpjsKes    String?
+  bpjsKet    String?
+  tenantId   String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  payrolls   Payroll[]
+}
+
+model Payroll {
+  id           String   @id @default(uuid())
+  employeeId   String
+  month        Int
+  year         Int
+  grossPay     Float
+  allowances   Float    @default(0)
+  deductions   Float    @default(0)
+  biayaJabatan Float    @default(0)
+  iuranPensiun Float    @default(0)
+  pkp          Float    @default(0)
+  pph21        Float    @default(0)
+  terCategory  String?
+  terRate      Float    @default(0)
+  netPay       Float
+  status       String   @default("DRAFT")
+  notes        String?
+  tenantId     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  employee     Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model TaxKnowledge {
+  id         String   @id @default(uuid())
+  category   String
+  question   String
+  answer     String
+  keywords   String[]
+  references String[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  tenantId   String?
+  tenant     Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}

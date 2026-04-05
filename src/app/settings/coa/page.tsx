@@ -4,11 +4,17 @@ import { useState, useEffect, useRef } from 'react';
 import { Plus, Search, Edit2, Trash2, ArrowLeft, Filter, Upload, X, FileSpreadsheet, Download } from 'lucide-react';
 import Link from 'next/link';
 import styles from './page.module.css';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function ChartOfAccounts() {
+  const { t, formatCurrency } = useLanguage();
   const [accounts, setAccounts] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<any>(null);
+  const [newAccount, setNewAccount] = useState({ code: '', name: '', type: 'ASSET', balance: 0 });
   const [isUploading, setIsUploading] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -32,9 +38,6 @@ export default function ChartOfAccounts() {
     acc.code.includes(searchQuery)
   );
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
-  };
 
   const getTypeStyle = (type: string) => {
     switch(type) {
@@ -107,6 +110,67 @@ export default function ChartOfAccounts() {
     reader.readAsText(file);
   };
 
+  const handleAddAccount = async () => {
+    try {
+      const res = await fetch('/api/accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newAccount)
+      });
+      
+      if (res.ok) {
+        setIsAddModalOpen(false);
+        setNewAccount({ code: '', name: '', type: 'ASSET', balance: 0 });
+        fetchAccounts();
+      } else {
+        const err = await res.json();
+        alert(`Error: ${err.error}`);
+      }
+    } catch (e) {
+      alert('Network error adding account.');
+    }
+  };
+
+  const handleUpdateAccount = async () => {
+    try {
+      const res = await fetch('/api/accounts', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editingAccount)
+      });
+      
+      if (res.ok) {
+        setIsEditModalOpen(false);
+        setEditingAccount(null);
+        fetchAccounts();
+      } else {
+        const err = await res.json();
+        alert(`Error: ${err.error}`);
+      }
+    } catch (e) {
+      alert('Network error updating account.');
+    }
+  };
+
+  const handleDeleteAccount = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this account? This action cannot be undone if there are linked transactions.")) return;
+    
+    try {
+      const res = await fetch(`/api/accounts?id=${id}`, {
+        method: 'DELETE'
+      });
+      
+      const data = await res.json();
+      if (res.ok) {
+        fetchAccounts();
+      } else {
+        alert(`Error: ${data.error}`);
+      }
+    } catch (e) {
+      alert('Network error deleting account.');
+    }
+  };
+
   return (
     <div className={styles.container}>
       {/* Header */}
@@ -124,7 +188,7 @@ export default function ChartOfAccounts() {
           <button className={styles.btnOutline} onClick={() => setIsImportModalOpen(true)}>
             <Upload size={16} /> Import
           </button>
-          <button className={styles.btnPrimary}>
+          <button className={styles.btnPrimary} onClick={() => setIsAddModalOpen(true)}>
             <Plus size={16} /> New Account
           </button>
         </div>
@@ -174,8 +238,8 @@ export default function ChartOfAccounts() {
                 </td>
                 <td className={styles.textRight}>
                   <div className={styles.actionGroup}>
-                    <button className={styles.iconBtn}><Edit2 size={16} /></button>
-                    <button className={`${styles.iconBtn} ${styles.dangerIcon}`}><Trash2 size={16} /></button>
+                    <button className={styles.iconBtn} onClick={() => { setEditingAccount(acc); setIsEditModalOpen(true); }}><Edit2 size={16} /></button>
+                    <button className={`${styles.iconBtn} ${styles.dangerIcon}`} onClick={() => handleDeleteAccount(acc.id)}><Trash2 size={16} /></button>
                   </div>
                 </td>
               </tr>
@@ -191,6 +255,125 @@ export default function ChartOfAccounts() {
           </tbody>
         </table>
       </div>
+
+      {/* Add Account Modal */}
+      {isAddModalOpen && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalCard}>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>Add New General Ledger Account</h3>
+              <button className={styles.iconBtn} onClick={() => setIsAddModalOpen(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className={styles.modalBody}>
+              <div className={styles.formGrid}>
+                <div className={styles.inputGroup}>
+                  <label className={styles.inputLabel}>ACCOUNT CODE</label>
+                  <input 
+                    type="text" 
+                    className={styles.inputField} 
+                    placeholder="e.g. 1001"
+                    value={newAccount.code}
+                    onChange={(e) => setNewAccount({...newAccount, code: e.target.value})}
+                  />
+                </div>
+                <div className={styles.inputGroup}>
+                  <label className={styles.inputLabel}>ACCOUNT NAME</label>
+                  <input 
+                    type="text" 
+                    className={styles.inputField} 
+                    placeholder="e.g. Petty Cash"
+                    value={newAccount.name}
+                    onChange={(e) => setNewAccount({...newAccount, name: e.target.value})}
+                  />
+                </div>
+                <div className={styles.inputGroup}>
+                  <label className={styles.inputLabel}>ACCOUNT TYPE</label>
+                  <select 
+                    className={styles.inputField}
+                    value={newAccount.type}
+                    onChange={(e) => setNewAccount({...newAccount, type: e.target.value})}
+                  >
+                    <option value="ASSET">ASSET</option>
+                    <option value="LIABILITY">LIABILITY</option>
+                    <option value="EQUITY">EQUITY</option>
+                    <option value="REVENUE">REVENUE</option>
+                    <option value="EXPENSE">EXPENSE</option>
+                  </select>
+                </div>
+                <div className={styles.inputGroup}>
+                  <label className={styles.inputLabel}>OPENING BALANCE</label>
+                  <input 
+                    type="number" 
+                    className={styles.inputField} 
+                    value={newAccount.balance}
+                    onChange={(e) => setNewAccount({...newAccount, balance: parseFloat(e.target.value) || 0})}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className={styles.modalFooter}>
+               <button className={styles.btnOutline} onClick={() => setIsAddModalOpen(false)}>Cancel</button>
+               <button className={styles.btnPrimary} onClick={handleAddAccount}>Create Account</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Account Modal */}
+      {isEditModalOpen && editingAccount && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalCard}>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>Edit Account: {editingAccount.code}</h3>
+              <button className={styles.iconBtn} onClick={() => setIsEditModalOpen(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className={styles.modalBody}>
+              <div className={styles.formGrid}>
+                <div className={styles.inputGroup}>
+                  <label className={styles.inputLabel}>ACCOUNT NAME</label>
+                  <input 
+                    type="text" 
+                    className={styles.inputField} 
+                    value={editingAccount.name}
+                    onChange={(e) => setEditingAccount({...editingAccount, name: e.target.value})}
+                  />
+                </div>
+                <div className={styles.inputGroup}>
+                  <label className={styles.inputLabel}>ACCOUNT TYPE</label>
+                  <select 
+                    className={styles.inputField}
+                    value={editingAccount.type}
+                    onChange={(e) => setEditingAccount({...editingAccount, type: e.target.value})}
+                  >
+                    <option value="ASSET">ASSET</option>
+                    <option value="LIABILITY">LIABILITY</option>
+                    <option value="EQUITY">EQUITY</option>
+                    <option value="REVENUE">REVENUE</option>
+                    <option value="EXPENSE">EXPENSE</option>
+                  </select>
+                </div>
+                <div className={styles.inputGroup}>
+                  <label className={styles.inputLabel}>CURRENT BALANCE</label>
+                  <input 
+                    type="number" 
+                    className={styles.inputField} 
+                    value={editingAccount.balance}
+                    onChange={(e) => setEditingAccount({...editingAccount, balance: parseFloat(e.target.value) || 0})}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className={styles.modalFooter}>
+               <button className={styles.btnOutline} onClick={() => setIsEditModalOpen(false)}>Cancel</button>
+               <button className={styles.btnPrimary} onClick={handleUpdateAccount}>Update Account</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Import Modal */}
       {isImportModalOpen && (

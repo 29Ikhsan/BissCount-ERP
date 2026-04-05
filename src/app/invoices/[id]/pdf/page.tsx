@@ -3,33 +3,43 @@
 import { useEffect, useState } from 'react';
 import styles from './page.module.css';
 import { useParams, useRouter } from 'next/navigation';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function InvoicePDFView() {
   const { id } = useParams();
   const router = useRouter();
+  const { formatCurrency } = useLanguage();
+  const [orgLogo, setOrgLogo] = useState<string | null>(null);
   
-  // Using minimal mock data until dynamically plugged into `/api/invoices/[id]`
-  // In a real scenario, useEffect fetches `id` from backend
-  const [invoice, setInvoice] = useState({
-    invoiceNo: id === 'demo' ? 'INV-2026-001' : id as string,
-    clientName: 'PT Global Teknologi',
-    date: new Date().toISOString().split('T')[0],
-    dueDate: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
-    items: [
-      { description: 'Cloud Architecture Setup', quantity: 1, unitPrice: 2000, total: 2000 },
-      { description: 'Monthly Maintenance Support', quantity: 3, unitPrice: 500, total: 1500 }
-    ],
-    amount: 3500,
-    status: 'PENDING'
-  });
+  const [invoice, setInvoice] = useState<any>(null);
 
   useEffect(() => {
-    // Attempt auto-print on successful render after a split second
-    const timer = setTimeout(() => {
-      window.print();
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, []);
+    async function loadData() {
+      try {
+        const [invRes, settingsRes] = await Promise.all([
+          fetch(`/api/invoices/${id}`),
+          fetch('/api/settings')
+        ]);
+        const invData = await invRes.json();
+        const settingsData = await settingsRes.json();
+        
+        if (invData.invoice) setInvoice(invData.invoice);
+        if (settingsData.tenant && settingsData.tenant.logoUrl) {
+          setOrgLogo(settingsData.tenant.logoUrl);
+        }
+
+        // Attempt auto-print after data loads
+        setTimeout(() => {
+          window.print();
+        }, 1000);
+      } catch (e) {
+        console.error('Failed to load PDF data');
+      }
+    }
+    if (id) loadData();
+  }, [id]);
+
+  if (!invoice) return <div className={styles.printContainer}>Loading invoice...</div>;
 
   return (
     <>
@@ -47,11 +57,17 @@ export default function InvoicePDFView() {
         {/* Header Section */}
         <div className={styles.invoiceHeader}>
           <div className={styles.brand}>
-            <div className={styles.brandName}>BIZZCOUNT GLOBAL CORP.</div>
-            <div className={styles.brandDetails}>
-              123 Business Avenue, Suite 400<br/>
-              Jakarta Selatan, ID 12190<br/>
-              hello@bizzcount.com | +62 21 555 1234
+            {orgLogo ? (
+              <img 
+                src={orgLogo} 
+                alt="Company Logo" 
+                style={{ maxHeight: '60px', maxWidth: '200px', objectFit: 'contain', marginBottom: '8px' }} 
+              />
+            ) : null}
+            <div className={styles.brandName}>AKSIA GLOBAL CORP.</div>
+            <div className={styles.brandAddress}>
+              Jl. Jenderal Sudirman No.1, Jakarta, Indonesia<br/>
+              hello@aksia.dev | +62 21 800 AKSIA
             </div>
           </div>
           <div className={styles.invoiceMeta}>
@@ -95,12 +111,12 @@ export default function InvoicePDFView() {
             </tr>
           </thead>
           <tbody>
-            {invoice.items.map((item, i) => (
+            {invoice?.items?.map((item: any, i: number) => (
               <tr key={i}>
                 <td>{item.description}</td>
                 <td className={styles.textCenter}>{item.quantity}</td>
-                <td className={styles.textRight}>${item.unitPrice.toLocaleString()}</td>
-                <td className={styles.textRight}>${item.total.toLocaleString()}</td>
+                <td className={styles.textRight}>{formatCurrency(item.unitPrice)}</td>
+                <td className={styles.textRight}>{formatCurrency(item.total)}</td>
               </tr>
             ))}
           </tbody>
@@ -111,23 +127,23 @@ export default function InvoicePDFView() {
           <div className={styles.totalsBox}>
             <div className={styles.totalRow}>
               <span>Subtotal</span>
-              <span>${invoice.amount.toLocaleString()}</span>
+              <span>{formatCurrency(invoice.amount)}</span>
             </div>
             <div className={styles.totalRow}>
               <span>Tax (0%)</span>
-              <span>$0.00</span>
+              <span>{formatCurrency(0)}</span>
             </div>
             <div className={styles.totalSummary}>
               <span>TOTAL DUE</span>
-              <span>${invoice.amount.toLocaleString()}</span>
+              <span>{formatCurrency(invoice.amount)}</span>
             </div>
           </div>
         </div>
 
         {/* Footer */}
         <div className={styles.footer}>
-          Please transfer payments via Wire Transfer or ACH to BizzCount Global Corp. Account No: 1234-5678-9012.<br/>
-          Thank you for your business! Document generated securely by BizzCount ERP.
+          Please transfer payments via Wire Transfer or ACH to AKSIA Global Corp. Account No: 1234-5678-9012.<br/>
+          Thank you for your business! Document generated securely by AKSIA ERP.
         </div>
         
         {/* On-Screen Print Tools (Hidden during print) */}

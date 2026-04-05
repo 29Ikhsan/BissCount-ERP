@@ -2,22 +2,40 @@
 
 import { Search, Bell, HelpCircle, LogOut } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
+import { useLanguage } from '@/context/LanguageContext';
 import styles from './Topbar.module.css';
 
 export default function Topbar() {
   const { data: session, status } = useSession();
+  const { locale, setLocale, t } = useLanguage();
+
   return (
     <header className={styles.topbar}>
       <div className={styles.searchContainer}>
         <Search className={styles.searchIcon} size={18} />
         <input 
           type="text" 
-          placeholder="Search reports, fiscal years, or audits..." 
+          placeholder={t('SearchAnything')} 
           className={styles.searchInput} 
         />
       </div>
       
       <div className={styles.actions}>
+        <div className={styles.languageToggle}>
+          <button 
+            className={`${styles.langBtn} ${locale === 'en' ? styles.langActive : ''}`}
+            onClick={() => setLocale('en')}
+          >
+            EN
+          </button>
+          <button 
+            className={`${styles.langBtn} ${locale === 'id' ? styles.langActive : ''}`}
+            onClick={() => setLocale('id')}
+          >
+            ID
+          </button>
+        </div>
+
         <button className={styles.iconButton}>
           <div className={styles.notificationDot}></div>
           <Bell size={20} />
@@ -36,7 +54,7 @@ export default function Topbar() {
             </span>
           </div>
           <div className={styles.avatar}>
-            <img src="https://ui-avatars.com/api/?name=Ikhsan+Administrator&background=random" alt="Avatar" />
+            <img src={`https://ui-avatars.com/api/?name=${session?.user?.name || 'Guest'}&background=random`} alt="Avatar" />
           </div>
           <button 
             onClick={() => signOut({ callbackUrl: '/login' })} 
