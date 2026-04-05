@@ -134,7 +134,14 @@ export const translations: Record<string, Record<string, string>> = {
     Amount: "AMOUNT",
     Status: "STATUS",
     NoTransactions: "No transactions recorded in the ledger yet.",
-    ViewAllTransactions: "View All Transactions"
+    ViewAllTransactions: "View All Transactions",
+    SearchTooltip: "Global Search (⌘K)",
+    Notifications: "Notifications",
+    HelpCenter: "Help Center & Docs",
+    NoResults: "No results found for",
+    ViewAccount: "View Account",
+    ViewInvoice: "View Invoice",
+    ViewContact: "View Contact"
   },
   id: {
     // Sidebar
@@ -271,6 +278,13 @@ export const translations: Record<string, Record<string, string>> = {
     Amount: "JUMLAH",
     Status: "STATUS",
     NoTransactions: "Belum ada transaksi di buku besar.",
-    ViewAllTransactions: "Lihat Semua Transaksi"
+    ViewAllTransactions: "Lihat Semua Transaksi",
+    SearchTooltip: "Pencarian Global (⌘K)",
+    Notifications: "Notifikasi",
+    HelpCenter: "Pusat Bantuan & Dokumen",
+    NoResults: "Tidak ada hasil untuk",
+    ViewAccount: "Lihat Akun",
+    ViewInvoice: "Lihat Invoice",
+    ViewContact: "Lihat Kontak"
   }
 };

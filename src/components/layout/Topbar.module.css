@@ -62,14 +62,85 @@
 
 .notificationDot {
   position: absolute;
-  top: 0;
-  right: 0;
-  width: 6px;
-  height: 6px;
-  background-color: var(--color-danger);
+  top: 2px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  background-color: #EF4444; /* Standard red notification */
   border-radius: 50%;
-  border: 1.5px solid var(--color-surface);
+  border: 1.5px solid white;
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.1);
 }
+
+.searchResults {
+  position: absolute;
+  top: 110%;
+  left: 0;
+  width: 100%;
+  background-color: white;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 1000;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: var(--space-2);
+}
+
+.resultItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.resultItem:hover {
+  background-color: var(--color-surface-hover);
+}
+
+.resultIcon {
+  color: var(--color-primary);
+  background-color: rgba(15, 59, 140, 0.05);
+  padding: 6px;
+  border-radius: 6px;
+}
+
+.resultInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.resultTitle {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.resultSubtitle {
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+}
+
+.resultBadge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  background-color: var(--color-surface-hover);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-tertiary);
+}
+
+.noResults {
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--color-text-tertiary);
+  font-size: 0.8rem;
+}
+
 
 .profile {
   display: flex;
