@@ -192,7 +192,7 @@ export default function JournalHub() {
                  </button>
               </div>
 
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit} className={styles.form}>
                  <div className={styles.formGrid}>
                     <div className={styles.formGroup}>
                        <label className={styles.label}>Transaction Date</label>

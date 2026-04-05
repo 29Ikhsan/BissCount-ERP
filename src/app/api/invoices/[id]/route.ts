@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 // PATCH /api/invoices/[id] — Record Payment or Update Status
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params
+    const { id } = await params
     const body = await req.json()
     const { payment, status } = body
 
@@ -56,9 +56,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 }
 
 // GET /api/invoices/[id] — Fetch single invoice with items
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params
+    const { id } = await params
     const tenant = await prisma.tenant.findFirst()
     if (!tenant) return NextResponse.json({ error: 'No Tenant' }, { status: 500 })
 

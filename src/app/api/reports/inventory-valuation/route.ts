@@ -15,6 +15,8 @@ export async function GET() {
       }
     })
 
+    if (!tenant) return NextResponse.json({ error: 'No Tenant' }, { status: 404 })
+
     const reportData = (tenant.products || []).map(product => {
       const batches = product.stockBatches || []
       const totalQty = batches.reduce((sum, b) => sum + b.remainingQty, 0)
