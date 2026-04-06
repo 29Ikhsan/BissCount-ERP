@@ -12,16 +12,14 @@ export async function GET() {
     const tenant = await prisma.tenant.findFirst();
     if (!tenant) return NextResponse.json({ error: 'No Tenant' }, { status: 500 });
 
-    const logs = await prisma.auditLog.findMany({
+    const currencies = await prisma.currency.findMany({
       where: { tenantId: tenant.id },
-      include: { user: { select: { name: true } } },
-      orderBy: { createdAt: 'desc' },
-      take: 100
+      orderBy: { id: 'asc' }
     });
 
-    return NextResponse.json({ logs });
+    return NextResponse.json({ currencies });
   } catch (error) {
-    console.error('[Audit API Error]:', error);
-    return NextResponse.json({ error: 'Failed to fetch logs' }, { status: 500 });
+    console.error('[Currencies API Error]:', error);
+    return NextResponse.json({ error: 'Failed to fetch currencies' }, { status: 500 });
   }
 }

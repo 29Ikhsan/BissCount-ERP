@@ -17,8 +17,10 @@ import {
   Zap
 } from 'lucide-react';
 import Link from 'next/link';
+import { useToast } from '@/context/ToastContext';
 
 export default function PayrollCenter() {
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [month, setMonth] = useState(new Date().getMonth() + 1);
@@ -57,12 +59,12 @@ export default function PayrollCenter() {
       
       if (res.ok) {
         setPayrollResult(data);
-        alert(`Success! Payroll for ${data.count} employees processed. Journal ID: ${data.journalId}`);
+        showToast(`Success! Payroll for ${data.count} employees processed. Journal ID: ${data.journalId}`, 'success');
       } else {
-        alert(`Error: ${data.error}`);
+        showToast(`Error: ${data.error}`, 'error');
       }
     } catch (err) {
-      alert('Failed to connect to the payroll engine.');
+      showToast('Failed to connect to the payroll engine.', 'error');
     } finally {
       setIsProcessing(false);
     }

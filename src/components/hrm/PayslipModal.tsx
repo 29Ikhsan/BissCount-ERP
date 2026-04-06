@@ -40,7 +40,7 @@ export default function PayslipModal({ payroll, onClose }: PayslipModalProps) {
         <div className="p-8 overflow-y-auto flex-1 print:p-0">
           <div className="flex justify-between items-start mb-8">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">Bizzcount Global Corp</h1>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">AKSIA Global Corp</h1>
               <p className="text-slate-500 text-sm">Equity Tower, 32nd Floor, Jakarta SCBD</p>
             </div>
             <div className="text-right">
@@ -124,7 +124,7 @@ export default function PayslipModal({ payroll, onClose }: PayslipModalProps) {
 
           <div className="mt-12 text-center">
             <p className="text-[10px] text-slate-400">This is a computer generated document and does not require a physical signature.</p>
-            <p className="text-[10px] text-slate-400 mt-1">© 2026 Bizzcount ERP - Financial Integrity System</p>
+            <p className="text-[10px] text-slate-400 mt-1">© 2026 AKSIA ERP - Financial Integrity System</p>
           </div>
         </div>
 

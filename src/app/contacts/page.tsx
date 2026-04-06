@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import styles from './page.module.css';
 import { useLanguage } from '@/context/LanguageContext';
+import EmptyState from '@/components/common/EmptyState';
+import { PlusCircle } from 'lucide-react';
 
 export default function ContactsDirectory() {
   const router = useRouter();
@@ -208,8 +210,14 @@ export default function ContactsDirectory() {
 
                 {filteredData.length === 0 && (
                   <tr>
-                    <td colSpan={4} style={{ textAlign: 'center', padding: '40px', color: '#64748B' }}>
-                      No Contacts Found. Try adding a new Client or Vendor.
+                    <td colSpan={4} style={{ padding: '0px' }}>
+                      <EmptyState 
+                        title="No Contacts Found"
+                        description="Start by adding your first customer or vendor to manage outstanding balances and relationship history."
+                        actionLabel="Add New Contact"
+                        actionHref="/contacts/new"
+                        icon={<Users size={48} />}
+                      />
                     </td>
                   </tr>
                 )}

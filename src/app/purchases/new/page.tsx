@@ -18,11 +18,14 @@ import {
 } from 'lucide-react';
 import styles from './page.module.css';
 import { useLanguage } from '@/context/LanguageContext';
+import { useToast } from '@/context/ToastContext';
+import Tooltip from '@/components/common/Tooltip';
 
 function PurchaseFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { formatCurrency } = useLanguage();
+  const { showToast } = useToast();
   const [docType, setDocType] = useState('REQUISITION');
   const [discount, setDiscount] = useState(0);
   const [wht, setWht] = useState(0);
@@ -190,13 +193,13 @@ function PurchaseFormContent() {
       const responseBody = await res.json();
       
       if (res.ok) {
-        alert(`${getTitle()} saved successfully (PO No: ${responseBody.purchaseOrder?.poNumber})!`);
+        showToast(`${getTitle()} saved successfully (PO No: ${responseBody.purchaseOrder?.poNumber})!`, 'success');
         router.push('/purchases');
       } else {
-        alert(`Error: ${responseBody.error || 'Failed to save document'}`);
+        showToast(`Error: ${responseBody.error || 'Failed to save document'}`, 'error');
       }
     } catch (e) {
-      alert('Network error connecting to Backend API.');
+      showToast('Network error connecting to Backend API.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -408,7 +411,7 @@ function PurchaseFormContent() {
                 <span>{formatCurrency(subtotal)}</span>
               </div>
               <div className={styles.calcRow} style={{ alignItems: 'center' }}>
-                <span>Commercial Discount</span>
+                <span>Commercial Discount <Tooltip content="Potongan harga beli dari vendor sebelum pengenaan pajak (PPN)." /></span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <span style={{ color: '#EF4444', fontWeight: 600 }}>-Rp</span>
                   <input 
@@ -421,15 +424,15 @@ function PurchaseFormContent() {
                 </div>
               </div>
               <div className={styles.calcRow} style={{ color: '#0EA5E9', fontWeight: 600 }}>
-                <span>Tax Base (DPP / Harga for Tax)</span>
+                <span>Tax Base (DPP / Harga for Tax) <Tooltip content="Dasar Pengenaan Pajak untuk pembelian ini." /></span>
                 <span>{formatCurrency(dpp)}</span>
               </div>
               <div className={styles.calcRow} style={{ color: isVatTaxable ? '#64748b' : '#334155', opacity: isVatTaxable ? 0.7 : 1 }}>
-                <span>Estimated Tax (VAT)</span>
+                <span>Estimated Tax (VAT) <Tooltip content="Pajak Pertambahan Nilai (PPN) 11% yang akan menjadi Pajak Masukan bagi perusahaan." /></span>
                 <span>{formatCurrency(vat)}</span>
               </div>
               <div className={styles.calcRow} style={{ alignItems: 'center' }}>
-                <span>Withholding Tax (WHT)</span>
+                <span>Withholding Tax (WHT) <Tooltip content="Pajak yang wajib dipotong oleh perusahaan saat membayar tagihan vendor (PPh 23/21)." /></span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <input 
                     type="number" 

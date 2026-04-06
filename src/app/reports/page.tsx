@@ -167,7 +167,7 @@ export default function Dashboard() {
     setViewData(baseData);
   };
 
-  const getFileName = (base: string) => `Bizzcount_${base}_${new Date().toISOString().split('T')[0]}.xlsx`;
+  const getFileName = (base: string) => `AKSIA_${base}_${new Date().toISOString().split('T')[0]}.xlsx`;
 
   const downloadReport = () => {
     if (!apiReports) {

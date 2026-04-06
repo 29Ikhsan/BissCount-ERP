@@ -12,8 +12,10 @@ import {
   Briefcase
 } from 'lucide-react';
 import Link from 'next/link';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function HRMLanding() {
+  const { t } = useLanguage();
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [year, setYear] = useState(new Date().getFullYear());
 
@@ -33,7 +35,7 @@ export default function HRMLanding() {
             <Briefcase size={24} color="#10B981"/>
           </div>
           <div>
-            <h1 className={styles.title}>Human Capital Management</h1>
+            <h1 className={styles.title}>{t('HRM')}</h1>
             <p className={styles.subtitle}>Institutional administration for your workforce and payroll operations.</p>
           </div>
         </div>
@@ -70,7 +72,7 @@ export default function HRMLanding() {
             <Users size={32} color="white" />
           </div>
           <div className={styles.cardContent}>
-            <h2 className={styles.cardTitle}>Employee Registry</h2>
+            <h2 className={styles.cardTitle}>{t('DataEmployee')}</h2>
             <p className={styles.cardDesc}>
               Manage personal profiles, banking details, NPWP, and BPJS identifiers. 
               Institutional data entry for your entire workforce.
@@ -87,7 +89,7 @@ export default function HRMLanding() {
             <CreditCard size={32} color="white" />
           </div>
           <div className={styles.cardContent}>
-            <h2 className={styles.cardTitle}>Payroll Processing</h2>
+            <h2 className={styles.cardTitle}>{t('Payroll')}</h2>
             <p className={styles.cardDesc}>
               Execute monthly salary runs, calculate TER-compliant PPh 21, and 
               generate automated accounting journals.

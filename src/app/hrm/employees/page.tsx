@@ -10,13 +10,15 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useLanguage } from '@/context/LanguageContext';
+import { useToast } from '@/context/ToastContext';
 
 export default function EmployeesPage() {
+  const { showToast } = useToast();
   const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
-  const { formatCurrency } = useLanguage();
+  const { t, formatCurrency } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchEmployees = () => {
@@ -71,13 +73,13 @@ export default function EmployeesPage() {
           body: JSON.stringify(parsedData)
         });
         if (res.ok) {
-          alert(`Success imported employees!`);
+          showToast(`Success imported employees!`, 'success');
           fetchEmployees();
         } else {
-          alert('Import failed.');
+          showToast('Import failed.', 'error');
         }
       } catch (err) {
-        alert('Network error during import.');
+        showToast('Network error during import.', 'error');
       }
     };
     reader.readAsBinaryString(file);
@@ -134,15 +136,15 @@ export default function EmployeesPage() {
         body: JSON.stringify(selectedEmployee)
       });
       if (res.ok) {
-        alert(selectedEmployee.id ? 'Employee updated!' : 'New employee added!');
+        showToast(selectedEmployee.id ? 'Employee updated!' : 'New employee added!', 'success');
         setSelectedEmployee(null);
         fetchEmployees();
       } else {
         const err = await res.json();
-        alert(`Error: ${err.error}`);
+        showToast(`Error: ${err.error}`, 'error');
       }
     } catch (err) {
-      alert('Failed to save employee.');
+      showToast('Failed to save employee.', 'error');
     }
   };
 
@@ -164,7 +166,7 @@ export default function EmployeesPage() {
       {/* Header Section */}
       <header className={styles.header}>
         <div className={styles.headerTitleGroup}>
-          <h1 className={styles.title}>Data Pegawai (Employees)</h1>
+          <h1 className={styles.title}>{t('DataEmployee')}</h1>
           <p className={styles.subtitle}>Manage your organization's workforce, salaries, and PTKP tax configurations.</p>
         </div>
         <div className={styles.headerActions}>

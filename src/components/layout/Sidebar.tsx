@@ -27,6 +27,7 @@ import {
   TrendingUp,
   Play,
   User,
+  UserCheck,
   ChevronDown,
   ChevronRight
 } from 'lucide-react';
@@ -67,7 +68,16 @@ const menuItems = [
       { name: 'Expenses', icon: CreditCard, path: '/expenses', key: 'Expenses' },
     ]
   },
-  { name: 'HRM', icon: Users, path: '/hrm/employees', key: 'HRM' },
+  { 
+    name: 'HRM Dashboard', 
+    icon: Users, 
+    path: '/hrm', 
+    key: 'HRM',
+    subItems: [
+      { name: 'Data Employee', icon: UserCheck, path: '/hrm/employees', key: 'DataEmployee' },
+      { name: 'Payroll', icon: CreditCard, path: '/hrm/payroll', key: 'Payroll' },
+    ]
+  },
   { 
     name: 'Tax & Compliance', 
     icon: Shield, 
@@ -120,12 +130,9 @@ export default function Sidebar() {
   return (
     <aside className={styles.sidebar}>
       <div className={styles.brand}>
-        <div className={styles.logo}>
-          <div className={styles.logoCircle}>A</div>
-        </div>
         <div className={styles.brandText}>
           <h1 className={styles.companyName}>AKSIA</h1>
-          <span className={styles.companySubtitle}>ENTERPRISE ERP</span>
+          <span className={styles.companySubtitle}>ERP Powered by Artifical Intelegence</span>
         </div>
       </div>
       

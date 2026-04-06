@@ -18,10 +18,12 @@ import {
 } from 'lucide-react';
 import styles from './page.module.css';
 import { useLanguage } from '@/context/LanguageContext';
+import { useToast } from '@/context/ToastContext';
 
 export default function NewInventoryItem() {
   const router = useRouter();
   const { formatCurrency } = useLanguage();
+  const { showToast } = useToast();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -128,13 +130,13 @@ export default function NewInventoryItem() {
       const responseBody = await res.json();
       
       if (res.ok) {
-        alert(`Product ${formData.name} created successfully!`);
+        showToast(`Product ${formData.name} created successfully!`, 'success');
         router.push('/inventory');
       } else {
-        alert(`Error: ${responseBody.error || 'Failed to generate product'}`);
+        showToast(`Error: ${responseBody.error || 'Failed to generate product'}`, 'error');
       }
     } catch (e) {
-      alert('Network error connecting to Backend API.');
+      showToast('Network error connecting to Backend API.', 'error');
     } finally {
       setIsSubmitting(false);
     }

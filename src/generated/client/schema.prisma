@@ -99,6 +99,7 @@ model Account {
   name           String
   type           String
   balance        Float           @default(0)
+  currencyCode   String          @default("IDR")
   tenantId       String
   tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   bankStatements BankStatement[]

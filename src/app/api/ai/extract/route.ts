@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     const prompt = `You are a financial OCR AI. Extract details from this receipt filename: "${filename}". 
     Format your response as valid JSON with these keys: 
     "merchant" (string), "date" (YYYY-MM-DD), "total_amount" (number), "tax_amount" (number), "category" (string).
-    Example: {"merchant": "Bizzcount Coffee", "date": "2026-04-01", "total_amount": 75000, "tax_amount": 7500, "category": "Meals"}`;
+    Example: {"merchant": "AKSIA Coffee", "date": "2026-04-01", "total_amount": 75000, "tax_amount": 7500, "category": "Meals"}`;
 
     const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',

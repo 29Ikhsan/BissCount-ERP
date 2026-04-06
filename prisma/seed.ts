@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from '../src/generated/client'
 import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
@@ -11,7 +11,7 @@ async function main() {
   if (!tenant) {
     tenant = await prisma.tenant.create({
       data: {
-        name: 'Bizzcount Global Corp',
+        name: 'AKSIA Global Corp',
       },
     })
     console.log(`[+] Created Tenant: ${tenant.name} (${tenant.id})`)
@@ -20,10 +20,10 @@ async function main() {
   }
 
   // 2. Create SuperAdmin User
-  const hashedPassword = await bcrypt.hash('bizzcount2026', 10)
+  const hashedPassword = await bcrypt.hash('aksia2026', 10)
 
   const user = await prisma.user.upsert({
-    where: { email: 'admin@bizzcount.com' },
+    where: { email: 'admin@aksia.com' },
     update: {
       password: hashedPassword,
       name: 'Ikhsan Administrator',
@@ -31,7 +31,7 @@ async function main() {
       tenantId: tenant.id
     },
     create: {
-      email: 'admin@bizzcount.com',
+      email: 'admin@aksia.com',
       name: 'Ikhsan Administrator',
       password: hashedPassword,
       role: 'SUPERADMIN',
@@ -164,25 +164,29 @@ async function main() {
       data: {
         invoiceNo: `INV-${new Date().getFullYear()}-001`,
         clientName: customer.name,
-        date: new Date(),
-        dueDate: new Date(Date.now() + 30 * 86400000),
+        date: new Date('2026-04-12'),
+        dueDate: new Date('2026-05-12'),
         amount: 5000000,
-        taxAmount: 550000,
-        grandTotal: 5550000,
+        taxAmount: 600000, // PPN 12%
+        grandTotal: 5600000,
         discountAmount: 0,
         paidAmount: 0,
         status: 'PENDING',
+        taxPeriod: 4,
+        taxYear: 2026,
         tenantId: tenant.id,
         contactId: customer.id,
         costCenterId: cc.id,
         items: {
           create: [{
-            description: 'Jasa Konsultasi ERP - Bulan April 2026',
+            description: 'Strategic ERP Implementation - Phase 1 (AKSIA Platform)',
             quantity: 1,
             unitPrice: 5000000,
-            taxRate: 11,
-            taxAmount: 550000,
-            total: 5000000
+            taxRate: 12,
+            taxAmount: 600000,
+            total: 5000000,
+            ppnRate: 12,
+            itemType: 'A'
           }]
         }
       }
@@ -197,14 +201,67 @@ async function main() {
         tenantId: tenant.id,
         lines: {
           create: [
-            { accountId: accounts['1002'], debit: 5550000, credit: 0 },
+            { accountId: accounts['1002'], debit: 5600000, credit: 0 },
             { accountId: accounts['4001'], debit: 0, credit: 5000000 },
-            { accountId: accounts['2002'], debit: 0, credit: 550000 }
+            { accountId: accounts['2002'], debit: 0, credit: 600000 }
           ]
         }
       }
     })
     console.log('[+] Created Sample Invoice & Ledger Entries')
+  }
+
+  // 9. Sample Withholding Expenses (PPh Unifikasi)
+  const expenseData = [
+    {
+      merchant: 'Velocity Agency',
+      date: new Date('2026-04-15'),
+      category: 'OPERATING',
+      amount: 10000000,
+      description: 'Monthly Maintenance Service Fee',
+      whtRate: 2,
+      whtAmount: 200000,
+      article: '23'
+    },
+    {
+      merchant: 'Ruko Office Space',
+      date: new Date('2026-04-20'),
+      category: 'RENT',
+      amount: 25000000,
+      description: 'Office Rental Q2',
+      whtRate: 10,
+      whtAmount: 2500000,
+      article: '4(2)'
+    }
+  ]
+
+  for (const exp of expenseData) {
+    const existing = await prisma.expense.findFirst({
+        where: { merchant: exp.merchant, date: exp.date, tenantId: tenant.id }
+    })
+    if (!existing) {
+        await prisma.expense.create({
+            data: {
+                merchant: exp.merchant,
+                date: exp.date,
+                category: exp.category,
+                amount: exp.amount,
+                taxPeriod: 4,
+                taxYear: 2026,
+                tenantId: tenant.id,
+                items: {
+                    create: [{
+                        description: exp.description,
+                        amount: exp.amount,
+                        whtRate: exp.whtRate,
+                        whtAmount: exp.whtAmount,
+                        total: exp.amount - exp.whtAmount
+                    }]
+                }
+            }
+        })
+        console.log(`[+] Seeded Withholding Expense: ${exp.merchant} (PPh ${exp.article})`)
+    }
   }
 
   // 10. Sample Inventory Assets (Institutional Grade)

@@ -22,7 +22,7 @@ async function main() {
       category: 'coretax',
       keywords: ['coretax', 'sistem baru', 'aksia', 'otomatisasi', 'djp'],
       question: 'Apa itu sistem Coretax?',
-      answer: 'Sistem **Coretax** adalah sistem administrasi perpajakan yang sangat terintegrasi (CTAS) milik DJP. Di sistem Bizzcount, modul Tax Compliance sudah 100% tersinkronisasi dengan Coretax API, memungkinkan **e-Faktur Otomatis**, **e-Bupot Unifikasi**, dan pelaporan SPT Masa secara realtime melalui otentikasi biometrik dan sertifikat elektronik terbaru.',
+      answer: 'Sistem **Coretax** adalah sistem administrasi perpajakan yang sangat terintegrasi (CTAS) milik DJP. Di sistem AKSIA, modul Tax Compliance sudah 100% tersinkronisasi dengan Coretax API, memungkinkan **e-Faktur Otomatis**, **e-Bupot Unifikasi**, dan pelaporan SPT Masa secara realtime melalui otentikasi biometrik dan sertifikat elektronik terbaru.',
       references: ['DJP Update 2026']
     }
   ];

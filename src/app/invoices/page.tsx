@@ -20,23 +20,20 @@ import {
 import styles from './page.module.css';
 import { exportToCSV, triggerImport } from '@/lib/utils';
 import { useLanguage } from '@/context/LanguageContext';
+import EmptyState from '@/components/common/EmptyState';
+import { useToast } from '@/context/ToastContext';
 
 // Dummy fallback only shown when DB has no records yet
-const initialInvoices: any[] = [];
-const initialQuotations: any[] = [];
-const initialSalesOrders: any[] = [];
-const initialDeliveries: any[] = [];
-
 export default function OrderToCashHub() {
   const router = useRouter();
   const { t, formatCurrency, locale } = useLanguage();
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState('QUOTATIONS');
   
-  // Interactive State Storage
-  const [quotations, setQuotations] = useState(initialQuotations);
-  const [salesOrders, setSalesOrders] = useState(initialSalesOrders);
-  const [deliveries, setDeliveries] = useState(initialDeliveries);
-  const [invoices, setInvoices] = useState<any[]>(initialInvoices);
+  const [quotations, setQuotations] = useState<any[]>([]);
+  const [salesOrders, setSalesOrders] = useState<any[]>([]);
+  const [deliveries, setDeliveries] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<any[]>([]);
   
   // Filtering & Search
   const [filterStatus, setFilterStatus] = useState('All Statuses');
@@ -89,22 +86,7 @@ export default function OrderToCashHub() {
       }
     };
     fetchLiveInvoices();
-  }, []);
-
-  // Undo Toast State
-  const [toast, setToast] = useState<{ visible: boolean, message: string, onUndo: () => void, timeoutId?: NodeJS.Timeout } | null>(null);
-
-  const triggerToast = (message: string, undoFn: () => void) => {
-    if (toast?.timeoutId) clearTimeout(toast.timeoutId);
-    const timeoutId = setTimeout(() => {
-      setToast(null);
-    }, 6000); 
-    setToast({ visible: true, message, onUndo: () => {
-      undoFn();
-      setToast(null);
-      clearTimeout(timeoutId);
-    }, timeoutId });
-  };
+  }, [locale]);
 
   // --- Pipeline Conversion Handlers ---
   const handleApproveQuotation = (id: string) => {
@@ -120,7 +102,7 @@ export default function OrderToCashHub() {
       setSalesOrders([newSO, ...salesOrders]);
       setActiveTab('SALES_ORDERS');
       
-      triggerToast(`Converted Quotation ${id} to Sales Order.`, () => {
+      showToast(`Converted Quotation ${id} to Sales Order.`, 'success', () => {
          setQuotations(prevQuotations);
          setSalesOrders(prevSalesOrders);
          setActiveTab('QUOTATIONS');
@@ -141,7 +123,7 @@ export default function OrderToCashHub() {
       setDeliveries([newDO, ...deliveries]);
       setActiveTab('DELIVERIES');
       
-      triggerToast(`Initiated Delivery Order ${newDO.id} for Sales Order ${id}.`, () => {
+      showToast(`Initiated Delivery Order ${newDO.id} for Sales Order ${id}.`, 'success', () => {
          setSalesOrders(prevSalesOrders);
          setDeliveries(prevDeliveries);
          setActiveTab('SALES_ORDERS');
@@ -158,7 +140,7 @@ export default function OrderToCashHub() {
     });
     setDeliveries(updatedDeliveries);
     
-    triggerToast(`Marked Delivery ${id} as SHIPPED.`, () => {
+    showToast(`Marked Delivery ${id} as SHIPPED.`, 'info', () => {
        setDeliveries(prevDeliveries);
     });
   };
@@ -176,7 +158,7 @@ export default function OrderToCashHub() {
       setInvoices([newInv, ...invoices]);
       setActiveTab('INVOICES');
       
-      triggerToast(`Successfully billed Invoice ${newInv.id}.`, () => {
+      showToast(`Successfully billed Invoice ${newInv.id}.`, 'success', () => {
          setDeliveries(prevDeliveries);
          setInvoices(prevInvoices);
          setActiveTab('DELIVERIES');
@@ -184,55 +166,62 @@ export default function OrderToCashHub() {
     }
   };
 
-  const handleRecordPayment = async (id: string, currentAmount: number) => {
-    const invTotal = typeof currentAmount === 'number' ? currentAmount : 0;
-    const inputStr = window.prompt(`${t('RecordPayment')} (Total: ${formatCurrency(invTotal)}):`, '');
-    if (inputStr === null || inputStr === '') return;
+  const [paymentModal, setPaymentModal] = useState<{ isOpen: boolean, id: string, total: number, dbId?: string } | null>(null);
+  const [paymentValue, setPaymentValue] = useState('');
 
-    const payment = parseFloat(inputStr.replace(/[^0-9.-]+/g, ''));
-    if (isNaN(payment) || payment <= 0) { alert('Nominal tidak valid.'); return; }
+  const handleRecordPaymentSubmit = async () => {
+    if (!paymentModal) return;
+    const payment = parseFloat(paymentValue.replace(/[^0-9.-]+/g, ''));
+    
+    if (isNaN(payment) || payment <= 0) {
+      showToast('Nominal tidak valid.', 'error');
+      return;
+    }
 
-    // Find DB id for API call
-    const inv = invoices.find(i => i.id === id);
-    const dbId = inv?._dbId;
-
-    if (dbId) {
-      // Persist to database via PATCH
+    if (paymentModal.dbId) {
       try {
-        const res = await fetch(`/api/invoices/${dbId}`, {
+        const res = await fetch(`/api/invoices/${paymentModal.dbId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ payment })
         });
         const data = await res.json();
         if (res.ok) {
-          // Update local state from API response
           const updated = data.invoice;
-          setInvoices(invoices.map(i => i.id === id ? {
+          setInvoices(invoices.map(i => i.id === paymentModal.id ? {
             ...i,
             paidAmount: Number(updated.paidAmount),
             status: updated.status
           } : i));
-          triggerToast(`Pembayaran ${formatCurrency(payment)} dicatat untuk Invoice ${id}.`, () => {});
+          showToast(`Pembayaran ${formatCurrency(payment)} dicatat untuk Invoice ${paymentModal.id}.`, 'success');
+          setPaymentModal(null);
+          setPaymentValue('');
         } else {
-          alert(`Gagal: ${data.error}`);
+          showToast(`Gagal: ${data.error}`, 'error');
         }
       } catch (e) {
-        alert('Koneksi gagal ke server.');
+        showToast('Koneksi gagal ke server.', 'error');
       }
     } else {
-      // Fallback: local state only (for dummy/pipeline-generated docs)
+      // Offline/Local Fallback
       const prevInvoices = [...invoices];
       const updatedInvoices = invoices.map(i => {
-        if (i.id === id) {
+        if (i.id === paymentModal.id) {
           const newPaid = (i.paidAmount || 0) + payment;
           return { ...i, paidAmount: newPaid, status: newPaid >= i.amount ? 'PAID' : 'PARTIAL' };
         }
         return i;
       });
       setInvoices(updatedInvoices);
-      triggerToast(`Pembayaran ${formatCurrency(payment)} dicatat untuk Invoice ${id}.`, () => setInvoices(prevInvoices));
+      showToast(`Pembayaran ${formatCurrency(payment)} dicatat (Offline Mode).`, 'info', () => setInvoices(prevInvoices));
+      setPaymentModal(null);
+      setPaymentValue('');
     }
+  };
+
+  const handleRecordPayment = (id: string, currentAmount: number) => {
+    const inv = invoices.find(i => i.id === id);
+    setPaymentModal({ isOpen: true, id, total: currentAmount, dbId: inv?._dbId });
   };
 
   const handleCancelDocument = (id: string) => {
@@ -252,7 +241,7 @@ export default function OrderToCashHub() {
     
     setTargetArray(updated);
     
-    triggerToast(`Document ${id} has been cancelled.`, () => {
+    showToast(`Document ${id} has been cancelled.`, 'warning', () => {
        setTargetArray(prevArray);
     });
   };
@@ -295,34 +284,17 @@ export default function OrderToCashHub() {
       amount: d.amount,
       status: d.status
     }));
-    exportToCSV(`BizzCount_${activeTab.toLowerCase()}_export.csv`, headers, data);
+    exportToCSV(`AKSIA_${activeTab.toLowerCase()}_export.csv`, headers, data);
   };
 
   const handleImportTrigger = () => {
     triggerImport((file) => {
-      triggerToast(`Successfully imported records from ${file.name}. Processing...`, () => {});
+      showToast(`Successfully imported records from ${file.name}. Processing...`, 'info');
     });
   };
 
   return (
     <div className={styles.container}>
-      {/* Undo Toast Notification */}
-      {toast?.visible && (
-        <div className={styles.toastContainer}>
-           <div className={styles.toastMessage}>
-             <span style={{ marginRight: '8px' }}>✓</span> {toast.message}
-           </div>
-           <button className={styles.undoBtn} onClick={toast.onUndo}>
-             <RotateCcw size={14} /> UNDO
-           </button>
-           <button className={styles.toastCloseBtn} onClick={() => {
-              if (toast.timeoutId) clearTimeout(toast.timeoutId);
-              setToast(null);
-           }}>
-             <X size={16} />
-           </button>
-        </div>
-      )}
 
       {/* Header */}
       <div className={styles.header}>
@@ -524,8 +496,13 @@ export default function OrderToCashHub() {
             ))}
             {filteredData.length === 0 && (
               <tr>
-                 <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>
-                    No records found matching your current filters.
+                 <td colSpan={6} style={{ textAlign: 'center', padding: '0px' }}>
+                    <EmptyState 
+                      title={`No ${activeTab.toLowerCase().replace('_', ' ')} found`}
+                      description="You haven't created any records here yet, or no results match your current search/filter criteria."
+                      actionLabel={`Create New ${activeTab.substring(0, activeTab.length - 1)}`}
+                      actionHref={`/invoices/new?type=${activeTab.toLowerCase()}`}
+                    />
                  </td>
               </tr>
             )}
@@ -567,6 +544,63 @@ export default function OrderToCashHub() {
           </div>
         )}
       </div>
+      {/* Payment Modal */}
+      {paymentModal?.isOpen && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>Record Payment for {paymentModal.id}</h3>
+              <button 
+                className={styles.closeBtn} 
+                onClick={() => { setPaymentModal(null); setPaymentValue(''); }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            
+            <div className={styles.modalBody}>
+              <div className={styles.paymentSummary}>
+                <div className={styles.summaryItem}>
+                  <span className={styles.summaryLabel}>Total Invoice</span>
+                  <span className={styles.summaryValue}>{formatCurrency(paymentModal.total)}</span>
+                </div>
+              </div>
+
+              <div className={styles.inputGroup}>
+                <label className={styles.inputLabel}>Nominal Pembayaran (IDR)</label>
+                <div className={styles.inputWrapper}>
+                  <span className={styles.inputPrefix}>Rp</span>
+                  <input 
+                    type="number"
+                    className={styles.inputText}
+                    placeholder="Contoh: 500000"
+                    value={paymentValue}
+                    onChange={(e) => setPaymentValue(e.target.value)}
+                    autoFocus
+                    onKeyDown={(e) => e.key === 'Enter' && handleRecordPaymentSubmit()}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.modalFooter}>
+              <button 
+                className={styles.btnCancel} 
+                onClick={() => { setPaymentModal(null); setPaymentValue(''); }}
+              >
+                Batal
+              </button>
+              <button 
+                className={styles.btnPrimary} 
+                onClick={handleRecordPaymentSubmit}
+                disabled={!paymentValue}
+              >
+                Record Payment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

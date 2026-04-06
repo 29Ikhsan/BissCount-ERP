@@ -1,0 +1,76 @@
+-- AlterTable
+ALTER TABLE "Account" ADD COLUMN     "currencyCode" TEXT NOT NULL DEFAULT 'IDR';
+
+-- AlterTable
+ALTER TABLE "BankStatementLine" ADD COLUMN     "journalEntryId" TEXT;
+
+-- AlterTable
+ALTER TABLE "Contact" ADD COLUMN     "idNumber" TEXT,
+ADD COLUMN     "idType" TEXT DEFAULT 'NPWP',
+ADD COLUMN     "taxId" TEXT,
+ADD COLUMN     "tkuId" TEXT DEFAULT '0000000000000000000000';
+
+-- AlterTable
+ALTER TABLE "Employee" ADD COLUMN     "address" TEXT,
+ADD COLUMN     "bankHolder" TEXT,
+ADD COLUMN     "bankName" TEXT,
+ADD COLUMN     "bankNumber" TEXT,
+ADD COLUMN     "bpjsKes" TEXT,
+ADD COLUMN     "bpjsKet" TEXT,
+ADD COLUMN     "nik" TEXT,
+ADD COLUMN     "npwp" TEXT,
+ADD COLUMN     "ptkpStatus" TEXT NOT NULL DEFAULT 'TK/0';
+
+-- AlterTable
+ALTER TABLE "Expense" ADD COLUMN     "contactId" TEXT,
+ADD COLUMN     "taxPeriod" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "taxYear" INTEGER NOT NULL DEFAULT 0;
+
+-- AlterTable
+ALTER TABLE "ExpenseItem" ADD COLUMN     "facilityCap" TEXT DEFAULT 'N/A',
+ADD COLUMN     "passportNo" TEXT,
+ADD COLUMN     "position" TEXT,
+ADD COLUMN     "ptkpStatus" TEXT DEFAULT 'TK/0',
+ADD COLUMN     "taxObjectCode" TEXT,
+ADD COLUMN     "tkuId" TEXT DEFAULT '0000000000000000000000',
+ADD COLUMN     "whtAmount" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "whtRate" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "workerStatus" TEXT DEFAULT 'Resident';
+
+-- AlterTable
+ALTER TABLE "Invoice" ADD COLUMN     "additionalInfo" TEXT,
+ADD COLUMN     "facilityCap" TEXT,
+ADD COLUMN     "fakturStatus" TEXT NOT NULL DEFAULT 'NORMAL',
+ADD COLUMN     "fakturType" TEXT NOT NULL DEFAULT 'Normal',
+ADD COLUMN     "sellerTkuId" TEXT DEFAULT '0000000000000000000000',
+ADD COLUMN     "supportDoc" TEXT,
+ADD COLUMN     "supportDocPeriod" TEXT,
+ADD COLUMN     "taxPeriod" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "taxYear" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "transactionCode" TEXT NOT NULL DEFAULT '01';
+
+-- AlterTable
+ALTER TABLE "InvoiceItem" ADD COLUMN     "baseValueOther" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "itemType" TEXT NOT NULL DEFAULT 'A',
+ADD COLUMN     "ppnRate" DOUBLE PRECISION NOT NULL DEFAULT 12,
+ADD COLUMN     "ppnbmAmount" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "ppnbmRate" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "sku" TEXT DEFAULT '000000',
+ADD COLUMN     "uomCode" TEXT NOT NULL DEFAULT 'UM.0002';
+
+-- AlterTable
+ALTER TABLE "MarketingCampaign" ADD COLUMN     "actualSpend" DOUBLE PRECISION NOT NULL DEFAULT 0;
+
+-- AlterTable
+ALTER TABLE "Payroll" ADD COLUMN     "biayaJabatan" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "iuranPensiun" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "pkp" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "pph21" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "terCategory" TEXT,
+ADD COLUMN     "terRate" DOUBLE PRECISION NOT NULL DEFAULT 0;
+
+-- AddForeignKey
+ALTER TABLE "Expense" ADD CONSTRAINT "Expense_contactId_fkey" FOREIGN KEY ("contactId") REFERENCES "Contact"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "BankStatementLine" ADD CONSTRAINT "BankStatementLine_journalEntryId_fkey" FOREIGN KEY ("journalEntryId") REFERENCES "JournalEntry"("id") ON DELETE SET NULL ON UPDATE CASCADE;

@@ -5,10 +5,12 @@ import { Plus, Save, Trash2, HelpCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 import { useLanguage } from '@/context/LanguageContext';
+import { useToast } from '@/context/ToastContext';
 
 export default function ManualJournal() {
   const router = useRouter();
   const { formatCurrency } = useLanguage();
+  const { showToast } = useToast();
   const [chartOfAccounts, setChartOfAccounts] = useState<any[]>([]);
   const [costCenters, setCostCenters] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,13 +65,13 @@ export default function ManualJournal() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isBalanced) {
-      alert("Journal entries must be balanced (Total Debits = Total Credits).");
+      showToast("Journal entries must be balanced (Total Debits = Total Credits).", "warning");
       return;
     }
 
     const invalidAccount = lines.find(l => !l.accountId);
     if(invalidAccount) {
-      alert("All lines must select an account");
+      showToast("All lines must select an account", "warning");
       return;
     }
 
@@ -96,13 +98,13 @@ export default function ManualJournal() {
       const responseBody = await res.json();
       
       if (res.ok) {
-        alert("Manual Journal Entry successfully posted!");
+        showToast("Manual Journal Entry successfully posted!", "success");
         router.push('/');
       } else {
-        alert(`Error: ${responseBody.error || 'Failed to post journal'}`);
+        showToast(`Error: ${responseBody.error || 'Failed to post journal'}`, "error");
       }
     } catch (err) {
-      alert('Network error connecting to Backend API.');
+      showToast('Network error connecting to Backend API.', "error");
     } finally {
       setIsSubmitting(false);
     }

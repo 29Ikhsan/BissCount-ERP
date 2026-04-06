@@ -8590,6 +8590,7 @@ export namespace Prisma {
     name: string | null
     type: string | null
     balance: number | null
+    currencyCode: string | null
     tenantId: string | null
   }
 
@@ -8599,6 +8600,7 @@ export namespace Prisma {
     name: string | null
     type: string | null
     balance: number | null
+    currencyCode: string | null
     tenantId: string | null
   }
 
@@ -8608,6 +8610,7 @@ export namespace Prisma {
     name: number
     type: number
     balance: number
+    currencyCode: number
     tenantId: number
     _all: number
   }
@@ -8627,6 +8630,7 @@ export namespace Prisma {
     name?: true
     type?: true
     balance?: true
+    currencyCode?: true
     tenantId?: true
   }
 
@@ -8636,6 +8640,7 @@ export namespace Prisma {
     name?: true
     type?: true
     balance?: true
+    currencyCode?: true
     tenantId?: true
   }
 
@@ -8645,6 +8650,7 @@ export namespace Prisma {
     name?: true
     type?: true
     balance?: true
+    currencyCode?: true
     tenantId?: true
     _all?: true
   }
@@ -8741,6 +8747,7 @@ export namespace Prisma {
     name: string
     type: string
     balance: number
+    currencyCode: string
     tenantId: string
     _count: AccountCountAggregateOutputType | null
     _avg: AccountAvgAggregateOutputType | null
@@ -8769,6 +8776,7 @@ export namespace Prisma {
     name?: boolean
     type?: boolean
     balance?: boolean
+    currencyCode?: boolean
     tenantId?: boolean
     tenant?: boolean | TenantDefaultArgs<ExtArgs>
     bankStatements?: boolean | Account$bankStatementsArgs<ExtArgs>
@@ -8784,6 +8792,7 @@ export namespace Prisma {
     name?: boolean
     type?: boolean
     balance?: boolean
+    currencyCode?: boolean
     tenantId?: boolean
     tenant?: boolean | TenantDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["account"]>
@@ -8794,6 +8803,7 @@ export namespace Prisma {
     name?: boolean
     type?: boolean
     balance?: boolean
+    currencyCode?: boolean
     tenantId?: boolean
   }
 
@@ -8824,6 +8834,7 @@ export namespace Prisma {
       name: string
       type: string
       balance: number
+      currencyCode: string
       tenantId: string
     }, ExtArgs["result"]["account"]>
     composites: {}
@@ -9228,6 +9239,7 @@ export namespace Prisma {
     readonly name: FieldRef<"Account", 'String'>
     readonly type: FieldRef<"Account", 'String'>
     readonly balance: FieldRef<"Account", 'Float'>
+    readonly currencyCode: FieldRef<"Account", 'String'>
     readonly tenantId: FieldRef<"Account", 'String'>
   }
     
@@ -41857,6 +41869,7 @@ export namespace Prisma {
     name: 'name',
     type: 'type',
     balance: 'balance',
+    currencyCode: 'currencyCode',
     tenantId: 'tenantId'
   };
 
@@ -42862,6 +42875,7 @@ export namespace Prisma {
     name?: StringFilter<"Account"> | string
     type?: StringFilter<"Account"> | string
     balance?: FloatFilter<"Account"> | number
+    currencyCode?: StringFilter<"Account"> | string
     tenantId?: StringFilter<"Account"> | string
     tenant?: XOR<TenantRelationFilter, TenantWhereInput>
     bankStatements?: BankStatementListRelationFilter
@@ -42876,6 +42890,7 @@ export namespace Prisma {
     name?: SortOrder
     type?: SortOrder
     balance?: SortOrder
+    currencyCode?: SortOrder
     tenantId?: SortOrder
     tenant?: TenantOrderByWithRelationInput
     bankStatements?: BankStatementOrderByRelationAggregateInput
@@ -42894,6 +42909,7 @@ export namespace Prisma {
     name?: StringFilter<"Account"> | string
     type?: StringFilter<"Account"> | string
     balance?: FloatFilter<"Account"> | number
+    currencyCode?: StringFilter<"Account"> | string
     tenantId?: StringFilter<"Account"> | string
     tenant?: XOR<TenantRelationFilter, TenantWhereInput>
     bankStatements?: BankStatementListRelationFilter
@@ -42908,6 +42924,7 @@ export namespace Prisma {
     name?: SortOrder
     type?: SortOrder
     balance?: SortOrder
+    currencyCode?: SortOrder
     tenantId?: SortOrder
     _count?: AccountCountOrderByAggregateInput
     _avg?: AccountAvgOrderByAggregateInput
@@ -42925,6 +42942,7 @@ export namespace Prisma {
     name?: StringWithAggregatesFilter<"Account"> | string
     type?: StringWithAggregatesFilter<"Account"> | string
     balance?: FloatWithAggregatesFilter<"Account"> | number
+    currencyCode?: StringWithAggregatesFilter<"Account"> | string
     tenantId?: StringWithAggregatesFilter<"Account"> | string
   }
 
@@ -46056,6 +46074,7 @@ export namespace Prisma {
     name: string
     type: string
     balance?: number
+    currencyCode?: string
     tenant: TenantCreateNestedOneWithoutAccountsInput
     bankStatements?: BankStatementCreateNestedManyWithoutAccountInput
     expenseItems?: ExpenseItemCreateNestedManyWithoutAccountInput
@@ -46069,6 +46088,7 @@ export namespace Prisma {
     name: string
     type: string
     balance?: number
+    currencyCode?: string
     tenantId: string
     bankStatements?: BankStatementUncheckedCreateNestedManyWithoutAccountInput
     expenseItems?: ExpenseItemUncheckedCreateNestedManyWithoutAccountInput
@@ -46082,6 +46102,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     type?: StringFieldUpdateOperationsInput | string
     balance?: FloatFieldUpdateOperationsInput | number
+    currencyCode?: StringFieldUpdateOperationsInput | string
     tenant?: TenantUpdateOneRequiredWithoutAccountsNestedInput
     bankStatements?: BankStatementUpdateManyWithoutAccountNestedInput
     expenseItems?: ExpenseItemUpdateManyWithoutAccountNestedInput
@@ -46095,6 +46116,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     type?: StringFieldUpdateOperationsInput | string
     balance?: FloatFieldUpdateOperationsInput | number
+    currencyCode?: StringFieldUpdateOperationsInput | string
     tenantId?: StringFieldUpdateOperationsInput | string
     bankStatements?: BankStatementUncheckedUpdateManyWithoutAccountNestedInput
     expenseItems?: ExpenseItemUncheckedUpdateManyWithoutAccountNestedInput
@@ -46108,6 +46130,7 @@ export namespace Prisma {
     name: string
     type: string
     balance?: number
+    currencyCode?: string
     tenantId: string
   }
 
@@ -46117,6 +46140,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     type?: StringFieldUpdateOperationsInput | string
     balance?: FloatFieldUpdateOperationsInput | number
+    currencyCode?: StringFieldUpdateOperationsInput | string
   }
 
   export type AccountUncheckedUpdateManyInput = {
@@ -46125,6 +46149,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     type?: StringFieldUpdateOperationsInput | string
     balance?: FloatFieldUpdateOperationsInput | number
+    currencyCode?: StringFieldUpdateOperationsInput | string
     tenantId?: StringFieldUpdateOperationsInput | string
   }
 
@@ -49506,6 +49531,7 @@ export namespace Prisma {
     name?: SortOrder
     type?: SortOrder
     balance?: SortOrder
+    currencyCode?: SortOrder
     tenantId?: SortOrder
   }
 
@@ -49519,6 +49545,7 @@ export namespace Prisma {
     name?: SortOrder
     type?: SortOrder
     balance?: SortOrder
+    currencyCode?: SortOrder
     tenantId?: SortOrder
   }
 
@@ -49528,6 +49555,7 @@ export namespace Prisma {
     name?: SortOrder
     type?: SortOrder
     balance?: SortOrder
+    currencyCode?: SortOrder
     tenantId?: SortOrder
   }
 
@@ -55304,6 +55332,7 @@ export namespace Prisma {
     name: string
     type: string
     balance?: number
+    currencyCode?: string
     bankStatements?: BankStatementCreateNestedManyWithoutAccountInput
     expenseItems?: ExpenseItemCreateNestedManyWithoutAccountInput
     journalLines?: JournalLineCreateNestedManyWithoutAccountInput
@@ -55316,6 +55345,7 @@ export namespace Prisma {
     name: string
     type: string
     balance?: number
+    currencyCode?: string
     bankStatements?: BankStatementUncheckedCreateNestedManyWithoutAccountInput
     expenseItems?: ExpenseItemUncheckedCreateNestedManyWithoutAccountInput
     journalLines?: JournalLineUncheckedCreateNestedManyWithoutAccountInput
@@ -56302,6 +56332,7 @@ export namespace Prisma {
     name?: StringFilter<"Account"> | string
     type?: StringFilter<"Account"> | string
     balance?: FloatFilter<"Account"> | number
+    currencyCode?: StringFilter<"Account"> | string
     tenantId?: StringFilter<"Account"> | string
   }
 
@@ -58545,6 +58576,7 @@ export namespace Prisma {
     name: string
     type: string
     balance?: number
+    currencyCode?: string
     tenant: TenantCreateNestedOneWithoutAccountsInput
     bankStatements?: BankStatementCreateNestedManyWithoutAccountInput
     expenseItems?: ExpenseItemCreateNestedManyWithoutAccountInput
@@ -58557,6 +58589,7 @@ export namespace Prisma {
     name: string
     type: string
     balance?: number
+    currencyCode?: string
     tenantId: string
     bankStatements?: BankStatementUncheckedCreateNestedManyWithoutAccountInput
     expenseItems?: ExpenseItemUncheckedCreateNestedManyWithoutAccountInput
@@ -58639,6 +58672,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     type?: StringFieldUpdateOperationsInput | string
     balance?: FloatFieldUpdateOperationsInput | number
+    currencyCode?: StringFieldUpdateOperationsInput | string
     tenant?: TenantUpdateOneRequiredWithoutAccountsNestedInput
     bankStatements?: BankStatementUpdateManyWithoutAccountNestedInput
     expenseItems?: ExpenseItemUpdateManyWithoutAccountNestedInput
@@ -58651,6 +58685,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     type?: StringFieldUpdateOperationsInput | string
     balance?: FloatFieldUpdateOperationsInput | number
+    currencyCode?: StringFieldUpdateOperationsInput | string
     tenantId?: StringFieldUpdateOperationsInput | string
     bankStatements?: BankStatementUncheckedUpdateManyWithoutAccountNestedInput
     expenseItems?: ExpenseItemUncheckedUpdateManyWithoutAccountNestedInput
@@ -60364,6 +60399,7 @@ export namespace Prisma {
     name: string
     type: string
     balance?: number
+    currencyCode?: string
     tenant: TenantCreateNestedOneWithoutAccountsInput
     bankStatements?: BankStatementCreateNestedManyWithoutAccountInput
     journalLines?: JournalLineCreateNestedManyWithoutAccountInput
@@ -60376,6 +60412,7 @@ export namespace Prisma {
     name: string
     type: string
     balance?: number
+    currencyCode?: string
     tenantId: string
     bankStatements?: BankStatementUncheckedCreateNestedManyWithoutAccountInput
     journalLines?: JournalLineUncheckedCreateNestedManyWithoutAccountInput
@@ -60478,6 +60515,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     type?: StringFieldUpdateOperationsInput | string
     balance?: FloatFieldUpdateOperationsInput | number
+    currencyCode?: StringFieldUpdateOperationsInput | string
     tenant?: TenantUpdateOneRequiredWithoutAccountsNestedInput
     bankStatements?: BankStatementUpdateManyWithoutAccountNestedInput
     journalLines?: JournalLineUpdateManyWithoutAccountNestedInput
@@ -60490,6 +60528,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     type?: StringFieldUpdateOperationsInput | string
     balance?: FloatFieldUpdateOperationsInput | number
+    currencyCode?: StringFieldUpdateOperationsInput | string
     tenantId?: StringFieldUpdateOperationsInput | string
     bankStatements?: BankStatementUncheckedUpdateManyWithoutAccountNestedInput
     journalLines?: JournalLineUncheckedUpdateManyWithoutAccountNestedInput
@@ -63377,6 +63416,7 @@ export namespace Prisma {
     name: string
     type: string
     balance?: number
+    currencyCode?: string
     tenant: TenantCreateNestedOneWithoutAccountsInput
     bankStatements?: BankStatementCreateNestedManyWithoutAccountInput
     expenseItems?: ExpenseItemCreateNestedManyWithoutAccountInput
@@ -63389,6 +63429,7 @@ export namespace Prisma {
     name: string
     type: string
     balance?: number
+    currencyCode?: string
     tenantId: string
     bankStatements?: BankStatementUncheckedCreateNestedManyWithoutAccountInput
     expenseItems?: ExpenseItemUncheckedCreateNestedManyWithoutAccountInput
@@ -63560,6 +63601,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     type?: StringFieldUpdateOperationsInput | string
     balance?: FloatFieldUpdateOperationsInput | number
+    currencyCode?: StringFieldUpdateOperationsInput | string
     tenant?: TenantUpdateOneRequiredWithoutAccountsNestedInput
     bankStatements?: BankStatementUpdateManyWithoutAccountNestedInput
     expenseItems?: ExpenseItemUpdateManyWithoutAccountNestedInput
@@ -63572,6 +63614,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     type?: StringFieldUpdateOperationsInput | string
     balance?: FloatFieldUpdateOperationsInput | number
+    currencyCode?: StringFieldUpdateOperationsInput | string
     tenantId?: StringFieldUpdateOperationsInput | string
     bankStatements?: BankStatementUncheckedUpdateManyWithoutAccountNestedInput
     expenseItems?: ExpenseItemUncheckedUpdateManyWithoutAccountNestedInput
@@ -63669,6 +63712,7 @@ export namespace Prisma {
     name: string
     type: string
     balance?: number
+    currencyCode?: string
     tenant: TenantCreateNestedOneWithoutAccountsInput
     expenseItems?: ExpenseItemCreateNestedManyWithoutAccountInput
     journalLines?: JournalLineCreateNestedManyWithoutAccountInput
@@ -63681,6 +63725,7 @@ export namespace Prisma {
     name: string
     type: string
     balance?: number
+    currencyCode?: string
     tenantId: string
     expenseItems?: ExpenseItemUncheckedCreateNestedManyWithoutAccountInput
     journalLines?: JournalLineUncheckedCreateNestedManyWithoutAccountInput
@@ -63818,6 +63863,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     type?: StringFieldUpdateOperationsInput | string
     balance?: FloatFieldUpdateOperationsInput | number
+    currencyCode?: StringFieldUpdateOperationsInput | string
     tenant?: TenantUpdateOneRequiredWithoutAccountsNestedInput
     expenseItems?: ExpenseItemUpdateManyWithoutAccountNestedInput
     journalLines?: JournalLineUpdateManyWithoutAccountNestedInput
@@ -63830,6 +63876,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     type?: StringFieldUpdateOperationsInput | string
     balance?: FloatFieldUpdateOperationsInput | number
+    currencyCode?: StringFieldUpdateOperationsInput | string
     tenantId?: StringFieldUpdateOperationsInput | string
     expenseItems?: ExpenseItemUncheckedUpdateManyWithoutAccountNestedInput
     journalLines?: JournalLineUncheckedUpdateManyWithoutAccountNestedInput
@@ -66827,6 +66874,7 @@ export namespace Prisma {
     name: string
     type: string
     balance?: number
+    currencyCode?: string
   }
 
   export type AuditLogCreateManyTenantInput = {
@@ -67147,6 +67195,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     type?: StringFieldUpdateOperationsInput | string
     balance?: FloatFieldUpdateOperationsInput | number
+    currencyCode?: StringFieldUpdateOperationsInput | string
     bankStatements?: BankStatementUpdateManyWithoutAccountNestedInput
     expenseItems?: ExpenseItemUpdateManyWithoutAccountNestedInput
     journalLines?: JournalLineUpdateManyWithoutAccountNestedInput
@@ -67159,6 +67208,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     type?: StringFieldUpdateOperationsInput | string
     balance?: FloatFieldUpdateOperationsInput | number
+    currencyCode?: StringFieldUpdateOperationsInput | string
     bankStatements?: BankStatementUncheckedUpdateManyWithoutAccountNestedInput
     expenseItems?: ExpenseItemUncheckedUpdateManyWithoutAccountNestedInput
     journalLines?: JournalLineUncheckedUpdateManyWithoutAccountNestedInput
@@ -67171,6 +67221,7 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     type?: StringFieldUpdateOperationsInput | string
     balance?: FloatFieldUpdateOperationsInput | number
+    currencyCode?: StringFieldUpdateOperationsInput | string
   }
 
   export type AuditLogUpdateWithoutTenantInput = {

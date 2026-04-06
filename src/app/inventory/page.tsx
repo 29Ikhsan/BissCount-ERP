@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import styles from './page.module.css';
+import EmptyState from '@/components/common/EmptyState';
 import { 
   Package, 
   Plus, 
@@ -147,7 +148,7 @@ export default function InventoryHub() {
               <h2 className={styles.tableTitle}>Stock Realization</h2>
               <span className={styles.liveIndicator}>LIVE TRACKING</span>
            </div>
-           <div className={styles.integratedBagde}><Activity size={14}/> Integrated with Operations</div>
+           <div className={styles.integratedBadge}><Activity size={14}/> Integrated with Operations</div>
         </div>
         <table className={styles.table}>
           <thead>
@@ -162,6 +163,23 @@ export default function InventoryHub() {
             </tr>
           </thead>
           <tbody>
+            {filteredProducts.length === 0 && (
+              <tr>
+                <td colSpan={7} style={{ padding: '0px' }}>
+                  <EmptyState 
+                    title="No Inventory Items Found"
+                    description="Your warehouse is empty. Start by registering your products to track stock levels, valuation, and COGS."
+                    actionLabel="Register First Product"
+                    actionHref="#"
+                  />
+                  <div style={{ textAlign: 'center', paddingBottom: '20px' }}>
+                    <button onClick={() => setIsModalOpen(true)} className={styles.btnPrimary} style={{ background: '#279C5A', borderColor: '#279C5A' }}>
+                      <Plus size={16} /> Open Registration Modal
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            )}
             {filteredProducts.map((p: any) => (
               <tr key={p.id}>
                 <td>

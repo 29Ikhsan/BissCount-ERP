@@ -11,6 +11,8 @@ export const metadata: Metadata = {
 };
 
 import { LanguageProvider } from "@/context/LanguageContext";
+import { ToastProvider } from "@/context/ToastContext";
+import Breadcrumb from "@/components/layout/Breadcrumb";
 
 export default function RootLayout({
   children,
@@ -22,14 +24,17 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <Providers>
           <LanguageProvider>
-            <div className="app-container">
-              <Sidebar />
-              <div className="app-main">
-                <Topbar />
-                <main className="app-content">{children}</main>
-                <TaxChatWidget />
+            <ToastProvider>
+              <div className="app-container">
+                <Sidebar />
+                <div className="app-main">
+                  <Topbar />
+                  <Breadcrumb />
+                  <main className="app-content">{children}</main>
+                  <TaxChatWidget />
+                </div>
               </div>
-            </div>
+            </ToastProvider>
           </LanguageProvider>
         </Providers>
       </body>

@@ -171,7 +171,7 @@ export default function Expenses() {
       employee: e.employee,
       amount: e.amount
     }));
-    exportToCSV('BizzCount_Expenses.csv', headers, data);
+    exportToCSV('AKSIA_Expenses.csv', headers, data);
   };
 
   const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

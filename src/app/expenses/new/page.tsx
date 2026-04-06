@@ -18,10 +18,12 @@ import {
 } from 'lucide-react';
 import styles from './page.module.css';
 import { useLanguage } from '@/context/LanguageContext';
+import { useToast } from '@/context/ToastContext';
 
 export default function NewExpenseForm() {
   const router = useRouter();
   const { formatCurrency } = useLanguage();
+  const { showToast } = useToast();
   
   const [formData, setFormData] = useState({
     merchant: '',
@@ -125,7 +127,7 @@ export default function NewExpenseForm() {
 
   const handleSubmit = async () => {
     if (!formData.merchant || !formData.date) {
-      alert("Please fill merchant name and document date before submitting.");
+      showToast("Please fill merchant name and document date before submitting.", 'warning');
       return;
     }
 
@@ -149,13 +151,13 @@ export default function NewExpenseForm() {
       const responseBody = await res.json();
       
       if (res.ok) {
-        alert(`Expense request for ${formData.merchant} submitted successfully!`);
+        showToast(`Expense request for ${formData.merchant} submitted successfully!`, 'success');
         router.push('/expenses');
       } else {
-        alert(`Error: ${responseBody.error || 'Failed to record expense'}`);
+        showToast(`Error: ${responseBody.error || 'Failed to record expense'}`, 'error');
       }
     } catch (e) {
-      alert('Network error connecting to Backend API.');
+      showToast('Network error connecting to Backend API.', 'error');
     } finally {
       setIsSubmitting(false);
     }

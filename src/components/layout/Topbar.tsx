@@ -6,6 +6,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { useLanguage } from '@/context/LanguageContext';
 import { useRouter } from 'next/navigation';
 import styles from './Topbar.module.css';
+import HelpPanel from './HelpPanel';
 
 export default function Topbar() {
   const { data: session, status } = useSession();
@@ -16,6 +17,7 @@ export default function Topbar() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -124,7 +126,7 @@ export default function Topbar() {
           <div className={styles.notificationDot}></div>
           <Bell size={20} />
         </button>
-        <button className={styles.iconButton} title={t('HelpCenter')}>
+        <button className={styles.iconButton} title={t('HelpCenter')} onClick={() => setIsHelpOpen(true)}>
           <HelpCircle size={20} />
         </button>
         
@@ -149,6 +151,7 @@ export default function Topbar() {
           </button>
         </div>
       </div>
+      <HelpPanel isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
     </header>
   );
 }

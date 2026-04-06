@@ -43,8 +43,11 @@ export async function GET(request: NextRequest) {
     const pphData = whtLines.map(line => {
       // Logic to determine PPh Article based on account name or description
       let article = '23'; // Default to PPh 23
-      if (line.description.toLowerCase().includes('sewa') || line.account?.name.toLowerCase().includes('sewa')) article = '4(2)';
-      if (line.description.toLowerCase().includes('gaji') || line.account?.name.toLowerCase().includes('gaji')) article = '21';
+      const descLower = line.description.toLowerCase();
+      const accNameLower = (line.account?.name || '').toLowerCase();
+
+      if (descLower.includes('sewa') || descLower.includes('rental') || accNameLower.includes('sewa') || accNameLower.includes('rental')) article = '4(2)';
+      if (descLower.includes('gaji') || descLower.includes('salary') || accNameLower.includes('gaji') || accNameLower.includes('salary')) article = '21';
 
       return {
         id: line.id,

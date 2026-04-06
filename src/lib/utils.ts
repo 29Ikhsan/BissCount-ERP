@@ -1,5 +1,5 @@
 /**
- * BizzCount ERP - Shared Utility Library
+ * AKSIA ERP - Shared Utility Library
  * Centralized logic for exports, formatting, and simulations.
  */
 

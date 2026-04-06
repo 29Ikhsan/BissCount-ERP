@@ -218,7 +218,7 @@ export default function Settings() {
               <div className={styles.contentHeader}>
                 <div className={styles.breadcrumbs}>ACCOUNT CONFIGURATION</div>
                 <h1 className={styles.pageTitle}>Personal Profile</h1>
-                <p className={styles.pageSubtitle}>Update your personal information and manage how you appear across the Bizzcount organization. These settings help maintain your digital identity within the ledger.</p>
+                <p className={styles.pageSubtitle}>Update your personal information and manage how you appear across the AKSIA organization. These settings help maintain your digital identity within the ledger.</p>
               </div>
 
               {/* Profile Form */}

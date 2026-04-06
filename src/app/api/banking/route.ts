@@ -73,8 +73,8 @@ export async function GET() {
          match = { 
            type: score === 100 ? 'exact' : 'suggested', 
            score, 
-           bizzcountRef: potentialMatch.journalEntry.description, 
-           bizzcountId: potentialMatch.journalEntryId,
+           aksiaRef: potentialMatch.journalEntry.description, 
+           aksiaId: potentialMatch.journalEntryId,
            accountName: potentialMatch.account.name
          }
       }

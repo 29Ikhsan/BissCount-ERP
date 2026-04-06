@@ -65,7 +65,7 @@ export default function DeveloperPlatform() {
       <div className={styles.header}>
         <div>
           <h1 className={styles.pageTitle}><Terminal style={{ display: 'inline', verticalAlign: 'middle', marginRight: '8px' }} /> Developer Platform</h1>
-          <p className={styles.pageSubtitle}>Connect your POS, Marketplace, or custom internal systems directly to BizzCount ERP.</p>
+          <p className={styles.pageSubtitle}>Connect your POS, Marketplace, or custom internal systems directly to AKSIA ERP.</p>
         </div>
         <button className={styles.btnPrimary} onClick={handleCreateKey}>
           <Plus size={16} /> Create New Secret Key
@@ -124,7 +124,7 @@ export default function DeveloperPlatform() {
             <div className={styles.docBody}>
               <p className={styles.helpText}>{ep.desc}</p>
               <div className={styles.codeBlock}>
-{`curl -X ${ep.method} https://api.bizzcount.com${ep.path} \\
+{`curl -X ${ep.method} https://api.aksia.com${ep.path} \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json"${ep.method === 'POST' ? ` \\
   -d '{

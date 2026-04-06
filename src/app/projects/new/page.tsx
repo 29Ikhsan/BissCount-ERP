@@ -7,10 +7,11 @@ import {
   Target, BarChart2, CheckCircle
 } from 'lucide-react';
 import styles from './page.module.css';
+import { useToast } from '@/context/ToastContext';
 
 export default function NewCostCenter() {
   const router = useRouter();
-  const [showToast, setShowToast] = useState(false);
+  const { showToast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
     code: '',
@@ -33,14 +34,14 @@ export default function NewCostCenter() {
         throw new Error('Failed to create cost center');
       }
       
-      setShowToast(true);
+      showToast('Cost Center Created Successfully!', 'success');
       setTimeout(() => {
         router.push('/projects');
       }, 1500);
       
     } catch (error) {
       console.error(error);
-      alert('Error creating cost center');
+      showToast('Error creating cost center', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -48,12 +49,6 @@ export default function NewCostCenter() {
 
   return (
     <div className={styles.container}>
-      {showToast && (
-        <div className={styles.toast}>
-          <CheckCircle size={20} />
-          Cost Center Created Successfully!
-        </div>
-      )}
 
       {/* Header */}
       <div className={styles.header}>

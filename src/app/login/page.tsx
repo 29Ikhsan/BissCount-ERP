@@ -36,8 +36,10 @@ export default function Login() {
     <div className={styles.container}>
       <div className={styles.leftPanel}>
         <div className={styles.brand}>
-          <div className={styles.logo}><span>A</span></div>
-          <span className={styles.brandName}>AKSIA</span>
+          <div className={styles.brandText}>
+            <span className={styles.brandName}>AKSIA</span>
+            <span className={styles.brandSubtitle}>ERP Powered by Artifical Intelegence</span>
+          </div>
         </div>
         
         <div className={styles.heroContent}>

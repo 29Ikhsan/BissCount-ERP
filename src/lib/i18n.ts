@@ -31,6 +31,7 @@ export const translations: Record<string, Record<string, string>> = {
     ProductionQueue: "Production Order",
     BOMRecipes: "BOM Recipes",
     HRM: "HRM",
+    DataEmployee: "Data Employee",
     Employees: "Employees",
     Payroll: "Payroll",
     MainMenu: "MAIN MENU",
@@ -139,8 +140,6 @@ export const translations: Record<string, Record<string, string>> = {
     Notifications: "Notifications",
     HelpCenter: "Help Center & Docs",
     NoResults: "No results found for",
-    ViewAccount: "View Account",
-    ViewInvoice: "View Invoice",
     ViewContact: "View Contact"
   },
   id: {
@@ -174,7 +173,8 @@ export const translations: Record<string, Record<string, string>> = {
     Manufacturing: "Produksi & Manufaktur",
     ProductionQueue: "Order Produksi",
     BOMRecipes: "Resep BOM",
-    HRM: "HRM (SDM)",
+    HRM: "HRM",
+    DataEmployee: "Data Karyawan",
     Employees: "Karyawan",
     Payroll: "Penggajian",
     MainMenu: "MENU UTAMA",
@@ -283,8 +283,6 @@ export const translations: Record<string, Record<string, string>> = {
     Notifications: "Notifikasi",
     HelpCenter: "Pusat Bantuan & Dokumen",
     NoResults: "Tidak ada hasil untuk",
-    ViewAccount: "Lihat Akun",
-    ViewInvoice: "Lihat Invoice",
     ViewContact: "Lihat Kontak"
   }
 };

@@ -106,7 +106,7 @@ export default function FixedAssets() {
       accdepr: a.accumulatedDepr,
       bookvalue: a.cost - a.accumulatedDepr
     }));
-    exportToCSV('BizzCount_Asset_Register.csv', headers, data);
+    exportToCSV('AKSIA_Asset_Register.csv', headers, data);
   };
 
   const totalCost = assets.reduce((sum, item) => sum + item.cost, 0);

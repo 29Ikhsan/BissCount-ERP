@@ -178,6 +178,7 @@ exports.Prisma.AccountScalarFieldEnum = {
   name: 'name',
   type: 'type',
   balance: 'balance',
+  currencyCode: 'currencyCode',
   tenantId: 'tenantId'
 };
 

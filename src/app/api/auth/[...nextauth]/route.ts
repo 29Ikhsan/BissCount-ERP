@@ -62,7 +62,7 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: '/login',
   },
-  secret: process.env.NEXTAUTH_SECRET || "bizzcount-super-secret-key-2026",
+  secret: process.env.NEXTAUTH_SECRET || "aksia-super-secret-key-2026",
 }
 
 const handler = NextAuth(authOptions)

@@ -19,7 +19,7 @@ const reconciliationLines = [
     desc: 'STRIPE TRANSFER - SETTLEMENT',
     amount: 14500.00,
     type: 'deposit',
-    match: { type: 'exact', score: 100, bizzcountRef: 'INV-2024-002 Payment', bizzcountId: '#REC-0991' }
+    match: { type: 'exact', score: 100, aksiaRef: 'INV-2024-002 Payment', aksiaId: '#REC-0991' }
   },
   {
     id: 'tx-002',
@@ -27,7 +27,7 @@ const reconciliationLines = [
     desc: 'AWS EMEA SARL - CLOUD HOSTING',
     amount: -1250.00,
     type: 'withdrawal',
-    match: { type: 'suggested', score: 85, bizzcountRef: 'Amazon Web Services (Vendor)', bizzcountId: 'Mapped via Rules' }
+    match: { type: 'suggested', score: 85, aksiaRef: 'Amazon Web Services (Vendor)', aksiaId: 'Mapped via Rules' }
   },
   {
     id: 'tx-003',
@@ -43,7 +43,7 @@ const reconciliationLines = [
     desc: 'PT GLOBAL TECH SOL - INBOUND',
     amount: 45000.00,
     type: 'deposit',
-    match: { type: 'exact', score: 100, bizzcountRef: 'INV-2024-001 Payment', bizzcountId: '#REC-0992' }
+    match: { type: 'exact', score: 100, aksiaRef: 'INV-2024-001 Payment', aksiaId: '#REC-0992' }
   }
 ];
 
@@ -120,7 +120,7 @@ export default function Banking() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           lineId: id, 
-          targetId: line.match?.bizzcountId,
+          targetId: line.match?.aksiaId,
           costCenterId: line.selectedCC,
           action: 'reconcile' 
         })
@@ -322,7 +322,7 @@ export default function Banking() {
               <div className={styles.feedContainer}>
                 <div className={styles.feedHeaderRow}>
                   <div className={styles.feedColBank}>{t('BankStatementLine') || "BANK STATEMENT LINE"}</div>
-                  <div className={styles.feedColMatch}>{t('BizzcountMatch') || "BIZZCOUNT MATCH / ACTION"}</div>
+                  <div className={styles.feedColMatch}>{t('AKSIAMatch') || "AKSIA MATCH / ACTION"}</div>
                 </div>
 
                 <div className={styles.feedList}>
@@ -337,7 +337,7 @@ export default function Banking() {
                          </div>
                       </div>
 
-                      {/* Right side mapping - Bizzcount system match */}
+                      {/* Right side mapping - AKSIA system match */}
                       <div className={styles.systemLine}>
                         {line.match ? (
                           <div className={styles.matchBox}>
@@ -346,11 +346,11 @@ export default function Banking() {
                                 {getMatchIcon(line.match)}
                                 {line.match.type === 'exact' ? 'Exact Match' : 'AI Suggested Match'}
                               </div>
-                              <div className={styles.matchRef}>{line.match.bizzcountRef}</div>
+                              <div className={styles.matchRef}>{line.match.aksiaRef}</div>
                               {line.match.accountName && (
                                 <div className={styles.matchAccount}>Mapped to: {line.match.accountName}</div>
                               )}
-                              <div className={styles.matchId}>Reference: {line.match.bizzcountId.slice(0, 8)}</div>
+                              <div className={styles.matchId}>Reference: {line.match.aksiaId.slice(0, 8)}</div>
                             </div>
                             <div className={styles.matchActions}>
                               <button className={styles.btnMatch} onClick={() => handleMatch(line.id)}>OK</button>

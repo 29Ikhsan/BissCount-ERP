@@ -20,7 +20,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   // Load from localStorage if available
   useEffect(() => {
-    const saved = localStorage.getItem('bizzcount_locale');
+    const saved = localStorage.getItem('aksia_locale');
     if (saved) setLocale(saved);
   }, []);
 
@@ -40,7 +40,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   const updateLocale = (newLocale: string) => {
     setLocale(newLocale);
-    localStorage.setItem('bizzcount_locale', newLocale);
+    localStorage.setItem('aksia_locale', newLocale);
   };
 
   return (
