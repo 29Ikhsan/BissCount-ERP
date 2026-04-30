@@ -2,8 +2,12 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ensurePeriodOpen } from '@/lib/periodGuard';
 import { recordAudit } from '@/lib/audit';
+import { requireSession } from '@/lib/access-server';
 
 export async function POST(req: Request) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const body = await req.json();
     const { productId, fromWarehouseId, toWarehouseId, quantity } = body;

@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '../../../../../generated/client';
+import { prisma } from '@/lib/prisma';
 import { postToLedger, findAccountByCode } from '@/lib/ledgerUtility';
-
-const prisma = new PrismaClient();
+import { requireSession } from '@/lib/access-server';
 
 export async function POST(req: Request) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const tenant = await prisma.tenant.findFirst();
     if (!tenant) return NextResponse.json({ error: 'No Tenant found' }, { status: 500 });

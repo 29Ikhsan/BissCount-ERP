@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireSession } from '@/lib/access-server';
 
 export async function GET() {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const tenant = await prisma.tenant.findFirst()
     const user = await prisma.user.findFirst()
@@ -35,6 +39,9 @@ export async function GET() {
 }
 
 export async function PATCH(req: Request) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const body = await req.json()
     const { type, data } = body

@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireSession } from '@/lib/access-server';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const { id } = await params;
     const tenant = await prisma.tenant.findFirst();

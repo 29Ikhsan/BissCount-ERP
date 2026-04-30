@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireSession } from '@/lib/access-server';
 
 // In a real application, this would interface with the Prisma Client / PostgreSQL DB.
 // Since we're demonstrating the Open API, we generate realistic dummy data according to the schema.
@@ -46,6 +47,9 @@ const dummyLedgerData = [
 ];
 
 export async function GET(request: Request) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     // 1. Authenticate Request
     const authHeader = request.headers.get('Authorization');

@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireSession } from '@/lib/access-server';
 
 // PATCH /api/invoices/[id] — Record Payment or Update Full Document
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const { id } = await params
     const body = await req.json()
@@ -131,6 +135,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
 // GET /api/invoices/[id] — Fetch single invoice with items
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const { id } = await params
     const tenant = await prisma.tenant.findFirst()

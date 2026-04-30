@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireSession } from '@/lib/access-server';
 
 export async function GET(req: Request) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const tenant = await prisma.tenant.findFirst();
     if (!tenant) return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
@@ -19,6 +23,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const body = await req.json();
     const { name, email, phone, company, status, source, value, campaignId } = body;

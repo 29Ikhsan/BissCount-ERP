@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireSession } from '@/lib/access-server';
 
 /**
  * Handle CSV Bank Statement Imports
  */
 export async function POST(req: Request) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const body = await req.json();
     const { accountId, csvLines, bankName } = body;

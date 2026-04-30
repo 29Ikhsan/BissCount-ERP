@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { mapExpensesToBppu, generateXlsxBuffer, generateXmlBuffer } from '@/lib/taxation/coretax-export';
+import { requireSession } from '@/lib/access-server';
 
 /**
  * API: CoreTax Export for PPH Unifikasi (BPPU)
@@ -8,6 +9,9 @@ import { mapExpensesToBppu, generateXlsxBuffer, generateXmlBuffer } from '@/lib/
  */
 
 export async function POST(request: NextRequest) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const { month, year, format } = await request.json();
 

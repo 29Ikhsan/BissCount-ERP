@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendEmail, generateInvoiceTemplate } from '@/lib/mail';
+import { requireSession } from '@/lib/access-server';
 
 export async function POST(
   req: Request,
   { params }: { params: { id: string } }
 ) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const { id } = params;
 

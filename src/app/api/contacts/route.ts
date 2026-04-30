@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireSession } from '@/lib/access-server';
 
 // POST: Create a new CRM Contact
 export async function POST(req: Request) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const body = await req.json()
     const { 
@@ -55,6 +59,9 @@ export async function POST(req: Request) {
 
 // GET: Retrieve all Contacts with their real Outstanding Balance (Invoices AR / Purchase AP)
 export async function GET() {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const tenant = await prisma.tenant.findFirst()
     if (!tenant) return NextResponse.json({ error: 'No Tenant' }, { status: 500 })

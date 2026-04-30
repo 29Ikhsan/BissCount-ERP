@@ -4,8 +4,12 @@ import { ensurePeriodOpen } from '@/lib/periodGuard'
 import { postToLedger, findAccountByCode } from '@/lib/ledgerUtility'
 import { recordStockIn } from '@/lib/inventoryValuation'
 import { recordAudit } from '@/lib/audit'
+import { requireSession } from '@/lib/access-server';
 
 export async function POST(req: Request) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const body = await req.json()
     const { supplier, contactId, costCenterId, date, expectedDate, items, discountAmount = 0, type = 'PURCHASE_ORDER' } = body
@@ -132,6 +136,9 @@ export async function POST(req: Request) {
 }
 
 export async function GET() {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const tenant = await prisma.tenant.findFirst()
     if (!tenant) return NextResponse.json({ error: 'No Tenant' }, { status: 500 })

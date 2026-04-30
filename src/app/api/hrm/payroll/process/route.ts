@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { calculatePPh21 } from '@/lib/taxation/pph21-engine';
 import { findAccountByCode } from '@/lib/ledgerUtility';
 import { isPeriodLocked } from '@/lib/closing-utils';
+import { requireSession } from '@/lib/access-server';
 
 /**
  * Institutional Payroll Processing API
@@ -12,6 +13,9 @@ import { isPeriodLocked } from '@/lib/closing-utils';
  * 3. Records Ledger Entries (Journalization)
  */
 export async function POST(request: NextRequest) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const tenant = await prisma.tenant.findFirst();
     if (!tenant) return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
@@ -159,6 +163,9 @@ export async function POST(request: NextRequest) {
  * Handle Unpost Payroll (Rollback)
  */
 export async function DELETE(request: NextRequest) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const tenant = await prisma.tenant.findFirst();
     if (!tenant) return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });

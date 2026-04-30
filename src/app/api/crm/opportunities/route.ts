@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireSession } from '@/lib/access-server';
 
 export async function GET(req: Request) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const { searchParams } = new URL(req.url);
     const month = searchParams.get('month');
@@ -36,6 +40,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const body = await req.json();
     const { title, value, stage, probability, expectedClose, contactId, leadId } = body;
@@ -67,6 +74,9 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const body = await req.json();
     const { id, title, value, stage, probability, contactId, leadId, expectedClose } = body;

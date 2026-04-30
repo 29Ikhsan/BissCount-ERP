@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import OpenAI from 'openai';
 import { searchTaxKnowledge, welcomeMessage, categoryLabels, TaxTopic } from '@/lib/taxKnowledge';
+import { requireSession } from '@/lib/access-server';
 
 // Initialize DeepSeek Client (OpenAI-compatible)
 const deepseek = process.env.DEEPSEEK_API_KEY && process.env.DEEPSEEK_API_KEY !== 'REPLACE_WITH_DEEPSEEK_KEY'
@@ -12,6 +13,9 @@ const deepseek = process.env.DEEPSEEK_API_KEY && process.env.DEEPSEEK_API_KEY !=
   : null;
 
 export async function POST(request: NextRequest) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const { message, history = [] } = await request.json();
 

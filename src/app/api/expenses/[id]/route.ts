@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '../../../../generated/client';
+import { prisma } from '@/lib/prisma';
 import { postToLedger, findAccountByCode } from '@/lib/ledgerUtility';
 import { recordAudit } from '@/lib/audit';
-
-const prisma = new PrismaClient();
+import { requireSession } from '@/lib/access-server';
 
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const { id } = await params;
     if (!id) return NextResponse.json({ error: 'Missing ID' }, { status: 400 });

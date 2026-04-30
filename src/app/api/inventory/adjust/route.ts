@@ -4,8 +4,12 @@ import { ensurePeriodOpen } from '@/lib/periodGuard';
 import { postToLedger, findAccountByCode } from '@/lib/ledgerUtility';
 import { recordAudit } from '@/lib/audit';
 import { calculateCOGS } from '@/lib/inventoryValuation';
+import { requireSession } from '@/lib/access-server';
 
 export async function POST(req: Request) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const body = await req.json();
     const { productId, warehouseId, type, quantity, reason } = body;

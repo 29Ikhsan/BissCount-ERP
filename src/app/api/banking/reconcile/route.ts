@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { findAccountByCode } from '@/lib/ledgerUtility';
+import { requireSession } from '@/lib/access-server';
 
 export async function POST(req: Request) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const tenant = await prisma.tenant.findFirst();
     if (!tenant) return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });

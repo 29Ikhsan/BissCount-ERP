@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { mapPayrollToBp21, mapPayrollToBpa1, generateXlsxBuffer, generateXmlBuffer } from '@/lib/taxation/coretax-export';
+import { requireSession } from '@/lib/access-server';
 
 /**
  * API: CoreTax Export for PPH 21 (BP21 or BPA1)
@@ -8,6 +9,9 @@ import { mapPayrollToBp21, mapPayrollToBpa1, generateXlsxBuffer, generateXmlBuff
  */
 
 export async function GET(request: NextRequest) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const { searchParams } = new URL(request.url);
     const month = parseInt(searchParams.get('month') || '');

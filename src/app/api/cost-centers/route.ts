@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireSession } from '@/lib/access-server';
 
 // POST: Create a new Cost Center
 export async function POST(req: Request) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const body = await req.json()
     const { code, name, budget } = body
@@ -33,6 +37,9 @@ export async function POST(req: Request) {
 
 // GET: Retrieve all Cost Centers with real-time aggregated P&L metrics
 export async function GET() {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const tenant = await prisma.tenant.findFirst()
     if (!tenant) return NextResponse.json({ error: 'No Tenant' }, { status: 500 })

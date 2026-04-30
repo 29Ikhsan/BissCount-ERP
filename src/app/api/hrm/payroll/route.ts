@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { calculatePPh21 } from '@/lib/taxation/pph21-engine';
 import { postToLedger, findAccountByCode } from '@/lib/ledgerUtility';
+import { requireSession } from '@/lib/access-server';
 
 export async function POST(request: NextRequest) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const tenant = await prisma.tenant.findFirst();
     if (!tenant) return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
@@ -156,6 +160,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const { searchParams } = new URL(request.url);
     const month = parseInt(searchParams.get('month') || '');

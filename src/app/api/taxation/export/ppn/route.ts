@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { mapInvoicesToPpn, generateXlsxBuffer, generateXmlBuffer } from '@/lib/taxation/coretax-export';
+import { requireSession } from '@/lib/access-server';
 
 /**
  * API: CoreTax Export for PPN Keluaran
@@ -8,6 +9,9 @@ import { mapInvoicesToPpn, generateXlsxBuffer, generateXmlBuffer } from '@/lib/t
  */
 
 export async function GET(request: NextRequest) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const { searchParams } = new URL(request.url);
     const month = searchParams.get('month');

@@ -1,6 +1,7 @@
 // Bizzcount Financial Reports API - v2.2.0 (Added Tag Filtering)
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/prisma';
+import { requireSession } from '@/lib/access-server';
 
 interface ReportPeriod {
   label: string;
@@ -13,6 +14,9 @@ interface ReportPeriod {
 }
 
 export async function GET(request: NextRequest) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const { searchParams } = new URL(request.url);
     const rangeType = searchParams.get('type') || 'month';

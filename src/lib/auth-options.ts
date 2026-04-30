@@ -3,6 +3,11 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 
+const nextAuthSecret = process.env.NEXTAUTH_SECRET
+if (!nextAuthSecret) {
+  throw new Error("NEXTAUTH_SECRET is not set. Refusing to start with an insecure default.")
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -43,19 +48,28 @@ export const authOptions: NextAuthOptions = {
   ],
   session: { strategy: "jwt" },
   callbacks: {
-    async jwt({ token, user, trigger, session }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id
         token.role = (user as any).role
         token.tenantId = (user as any).tenantId
         token.permissions = (user as any).permissions
       }
-      
-      // AUTO-REFRESH: Listen for client-side update() calls to inject new permissions
-      if (trigger === 'update' && session?.permissions) {
-        token.permissions = session.permissions;
+
+      // On client-triggered update(), re-read role/tenant from the DB.
+      // Never trust values supplied by the client session payload — the
+      // previous implementation let any caller inject `permissions` here.
+      if (trigger === 'update' && token.id) {
+        const fresh = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { role: true, tenantId: true },
+        })
+        if (fresh) {
+          token.role = fresh.role
+          token.tenantId = fresh.tenantId
+        }
       }
-      
+
       return token
     },
     async session({ session, token }) {
@@ -71,5 +85,5 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: '/login',
   },
-  secret: process.env.NEXTAUTH_SECRET || "aksia-super-secret-key-2026",
+  secret: nextAuthSecret,
 }

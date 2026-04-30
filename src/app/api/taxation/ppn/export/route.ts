@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import * as XLSX from 'xlsx';
 import { create } from 'xmlbuilder2';
+import { requireSession } from '@/lib/access-server';
 
 export async function POST(request: NextRequest) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const { month, year, format } = await request.json();
 

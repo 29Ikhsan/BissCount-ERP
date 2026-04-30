@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { calculatePPh21 } from '@/lib/taxation/pph21-engine';
+import { requireSession } from '@/lib/access-server';
 
 export async function GET(
   request: NextRequest,
   context: { params: any }
 ) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const params = await context.params;
     const id = params.id;

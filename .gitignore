@@ -41,3 +41,20 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# local dev database
+/prisma/*.db
+/prisma/*.db-journal
+
+# scratch/dev artifacts
+/tmp/
+
+# local helper scripts not part of the app build
+/dump_excel_bppu.js
+/get_bp21_headers.js
+/read_xlsx_headers.js
+
+# sample/template spreadsheets
+/sample_pk.xlsx
+/bpmp_template.xlsx
+/bppu_template.xlsx

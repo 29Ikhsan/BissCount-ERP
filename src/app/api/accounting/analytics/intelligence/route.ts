@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import OpenAI from 'openai';
+import { requireSession } from '@/lib/access-server';
 
 // Initialize DeepSeek Client (OpenAI-compatible)
 const deepseek = process.env.DEEPSEEK_API_KEY && process.env.DEEPSEEK_API_KEY !== 'REPLACE_WITH_DEEPSEEK_KEY'
@@ -15,6 +16,9 @@ const deepseek = process.env.DEEPSEEK_API_KEY && process.env.DEEPSEEK_API_KEY !=
  * Now powered by a True AI Engine.
  */
 export async function POST(request: NextRequest) {
+  const __auth = await requireSession();
+  if (!__auth.ok) return __auth.response;
+
   try {
     const tenant = await prisma.tenant.findFirst();
     if (!tenant) return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
