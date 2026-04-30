@@ -1,0 +1,361 @@
+.container {
+  padding: 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.backBtn {
+  background: white;
+  border: 1px solid #E2E8F0;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.avatarLarge {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: #279C5A;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.headerTitleGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.entityStatus {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.statusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #279C5A;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+}
+
+.subtitle {
+  color: #64748B;
+  margin: 0;
+  font-size: 13px;
+}
+
+.headerActions {
+  display: flex;
+  gap: 12px;
+}
+
+.btnPrimary {
+  background: #279C5A;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btnSecondary {
+  background: white;
+  border: 1px solid #E2E8F0;
+  padding: 10px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.metricCard {
+  background: white;
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+}
+
+.metricLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.metricValue {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0F172A;
+}
+
+.metricSub {
+  font-size: 10px;
+  color: #64748B;
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+.mainGrid {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 32px;
+}
+
+.panel {
+  background: white;
+  padding: 24px;
+  border-radius: 16px;
+  border: 1px solid #E2E8F0;
+  margin-bottom: 24px;
+}
+
+.panelTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #0F172A;
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+.infoList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.infoItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #475569;
+  font-size: 13px;
+}
+
+.taxBadge {
+  margin-top: 24px;
+  padding: 12px;
+  background: #F0FDF4;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #166534;
+}
+
+.dealList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dealItem {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #F1F5F9;
+  background: #F8FAFC;
+}
+
+.dealMain {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.dealTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.dealVal {
+  font-size: 11px;
+  font-weight: 800;
+  color: #279C5A;
+}
+
+.dealStage {
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748B;
+  text-transform: uppercase;
+}
+
+.viewAllBtn {
+  margin-top: 16px;
+  width: 100%;
+  padding: 10px;
+  background: none;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.panelHeaderContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.tabGroup {
+  display: flex;
+  gap: 8px;
+  background: #F1F5F9;
+  padding: 4px;
+  border-radius: 10px;
+}
+
+.tab, .activeTab {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tab {
+  background: none;
+  color: #64748B;
+}
+
+.activeTab {
+  background: white;
+  color: #0F172A;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748B;
+  text-transform: uppercase;
+  padding: 12px;
+}
+
+.table td {
+  padding: 12px;
+  font-size: 13px;
+  border-top: 1px solid #F1F5F9;
+}
+
+.refNo {
+  font-weight: 700;
+  color: #279C5A;
+}
+
+.numeric {
+  text-align: right;
+  font-family: var(--font-geist-mono);
+}
+
+.textRight {
+  text-align: right;
+}
+
+.statusBadge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.paid { background: #D1FAE5; color: #065F46; }
+.pending { background: #FEF3C7; color: #92400E; }
+.overdue { background: #FEE2E2; color: #991B1B; }
+
+.iconBtn {
+  background: none;
+  border: none;
+  color: #64748B;
+  cursor: pointer;
+}
+
+.loadingContainer {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #64748B;
+}
+
+.loader {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #F1F5F9;
+  border-top: 3px solid #279C5A;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.emptyMsg {
+  text-align: center;
+  padding: 20px;
+  color: #94A3B8;
+  font-size: 12px;
+}

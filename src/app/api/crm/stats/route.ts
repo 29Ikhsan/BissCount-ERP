@@ -25,14 +25,23 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    const [leads, opportunities, campaigns] = await Promise.all([
+    const [leads, opportunities, campaigns, contactsWithInvoices] = await Promise.all([
       prisma.lead.findMany({ where: { tenantId, ...dateFilter } }),
       prisma.opportunity.findMany({ 
         where: { tenantId, ...dateFilter }, 
         include: { contact: true, lead: true },
         orderBy: { updatedAt: 'desc' }
       }),
-      prisma.marketingCampaign.findMany({ where: { tenantId } })
+      prisma.marketingCampaign.findMany({ where: { tenantId } }),
+      prisma.contact.findMany({
+        where: { tenantId, role: 'Customer' },
+        include: {
+          invoices: {
+            where: { status: { not: 'PAID' } },
+            select: { grandTotal: true, paidAmount: true }
+          }
+        }
+      })
     ]);
 
     // Calculate Pipeline Stats
@@ -58,6 +67,26 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    // --- Risk Intelligence: Credit Analysis ---
+    const riskMetrics = contactsWithInvoices.map(contact => {
+      const outstanding = contact.invoices.reduce((sum, inv) => sum + (inv.grandTotal - inv.paidAmount), 0);
+      const limit = contact.creditLimit || 0;
+      const usagePercent = limit > 0 ? (outstanding / limit) * 100 : (outstanding > 0 ? 100 : 0);
+      
+      return {
+        id: contact.id,
+        name: contact.name,
+        outstanding,
+        limit,
+        usagePercent
+      };
+    })
+    .filter(r => r.outstanding > 0)
+    .sort((a, b) => b.usagePercent - a.usagePercent);
+
+    const highRiskCount = riskMetrics.filter(r => r.usagePercent >= 90).length;
+    const totalOutstandingAR = riskMetrics.reduce((sum, r) => sum + r.outstanding, 0);
+
     return NextResponse.json({
       totalPipeline,
       weightedPipeline,
@@ -65,7 +94,12 @@ export async function GET(request: NextRequest) {
       funnel,
       stages,
       recentDeals: opportunities.slice(0, 5),
-      campaignCount: campaigns.length
+      campaignCount: campaigns.length,
+      riskMetrics: {
+        criticalDebtors: riskMetrics.slice(0, 5),
+        highRiskCount,
+        totalOutstandingAR
+      }
     });
 
   } catch (error: any) {

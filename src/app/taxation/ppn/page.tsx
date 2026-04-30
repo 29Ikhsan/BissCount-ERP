@@ -15,9 +15,12 @@ import {
   Calculator,
   Calendar,
   Layers,
-  ArrowRight
+  ArrowRight,
+  Bot,
+  X
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function PPNExport() {
   const [data, setData] = useState<any[]>([]);
@@ -27,6 +30,8 @@ export default function PPNExport() {
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear()
   });
+  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+  const router = useRouter();
 
   const fetchData = () => {
     setLoading(true);
@@ -45,25 +50,8 @@ export default function PPNExport() {
 
   const exportFormat = async (format: 'xml' | 'xls') => {
     try {
-      const res = await fetch('/api/taxation/ppn/export', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...period, format })
-      });
-      
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Export failed');
-      }
-      
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `PPN_Keluaran_${period.month}_${period.year}.${format}`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      const url = `/api/taxation/export/ppn?month=${period.month}&year=${period.year}&format=${format}`;
+      window.open(url, '_blank');
     } catch (error: any) {
       console.error('Tax export failed:', error.message);
     }
@@ -93,10 +81,10 @@ export default function PPNExport() {
           </div>
         </div>
         <div className={styles.headerActions} style={{ display: 'flex', gap: '12px' }}>
-           <button className={styles.btnSecondary} onClick={() => exportFormat('xml')} style={{ border: '1px solid #279C5A', color: '#279C5A', padding: '10px 20px', borderRadius: '12px', fontWeight: 700, background: 'white' }}>
-             <FileText size={16}/> Export e-Faktur XML
+           <button className={styles.btnSecondary} onClick={() => exportFormat('xml')} style={{ border: '1px solid #279C5A', color: '#279C5A', padding: '10px 20px', borderRadius: '12px', fontWeight: 700, background: 'white', display: 'flex', alignItems: 'center', gap: '8px' }}>
+             <FileText size={16}/> Export CoreTax XML
            </button>
-           <button className={styles.btnPrimary} onClick={() => exportFormat('xls')}>
+           <button className={styles.btnPrimary} onClick={() => exportFormat('xls')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
              <Download size={16}/> Export BPMP Excel
            </button>
         </div>
@@ -187,13 +175,79 @@ export default function PPNExport() {
                         </span>
                      </td>
                      <td className={styles.textRight}>
-                        <button className={styles.moreBtn}><ChevronRight size={16}/></button>
+                        <button className={styles.moreBtn} onClick={() => setSelectedInvoice(inv)}><ChevronRight size={16}/></button>
                      </td>
                   </tr>
                ))}
             </tbody>
          </table>
       </div>
+
+      {/* DETAIL MODAL */}
+      {selectedInvoice && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div className={styles.iconBox} style={{ backgroundColor: '#D1FAE5' }}><FileText size={20} color="#279C5A"/></div>
+                <div>
+                  <h2 className={styles.modalTitle}>Invoice Internal Review</h2>
+                  <p className={styles.modalSubtitle}>System realization for VAT compliance audit.</p>
+                </div>
+              </div>
+              <button className={styles.closeBtn} onClick={() => setSelectedInvoice(null)}><X size={20}/></button>
+            </div>
+
+            <div className={styles.modalBody}>
+               <div className={styles.detailGrid}>
+                  <div className={styles.detailRow}>
+                    <span className={styles.detailLabel}>Invoice Number</span>
+                    <span className={styles.detailValue}>{selectedInvoice.invoiceNo}</span>
+                  </div>
+                  <div className={styles.detailRow}>
+                    <span className={styles.detailLabel}>Client Entity</span>
+                    <span className={styles.detailValue}>{selectedInvoice.clientName}</span>
+                  </div>
+                  <div className={styles.detailRow}>
+                    <span className={styles.detailLabel}>Tax ID (NPWP)</span>
+                    <span className={styles.detailValue}>{selectedInvoice.npwp}</span>
+                  </div>
+                  <div className={styles.detailRow}>
+                    <span className={styles.detailLabel}>Issuance Date</span>
+                    <span className={styles.detailValue}>{new Date(selectedInvoice.date).toLocaleDateString()}</span>
+                  </div>
+               </div>
+
+               <div className={styles.financialSummary}>
+                  <div className={styles.finRow}>
+                     <span>Base Value (DPP)</span>
+                     <span>Rp {selectedInvoice.dpp.toLocaleString()}</span>
+                  </div>
+                  <div className={styles.finRow} style={{ borderTop: '1px solid #E2E8F0', paddingTop: '12px', marginTop: '12px', fontWeight: 800 }}>
+                     <span>VAT (PPN 12%)</span>
+                     <span style={{ color: '#279C5A' }}>Rp {selectedInvoice.ppn.toLocaleString()}</span>
+                  </div>
+               </div>
+
+               <div className={styles.taraIntegration}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                    <Bot size={18} color="#279C5A"/>
+                    <span style={{ fontSize: '12px', fontWeight: 800, color: '#1E293B' }}>ASK TARA INTELLIGENCE</span>
+                  </div>
+                  <p style={{ fontSize: '11px', color: '#64748B', marginBottom: '16px' }}>
+                     Unsure about PPN 12% treatment for this specific client? Consultation with TARA handles the latest 2026 regulations.
+                  </p>
+                  <button 
+                    className={styles.taraBtn}
+                    onClick={() => router.push(`/tax-assistant?q=Explain PPN 12 percent rules for invoice ${selectedInvoice.invoiceNo}`)}
+                  >
+                     Consult TARA <ArrowRight size={14}/>
+                  </button>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

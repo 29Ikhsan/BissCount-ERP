@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getTERCategory, calculatePPh21TER } from '@/lib/taxEngine';
+import { calculatePPh21 } from '@/lib/taxation/pph21-engine';
+import { findAccountByCode } from '@/lib/ledgerUtility';
+import { isPeriodLocked } from '@/lib/closing-utils';
 
 /**
  * Institutional Payroll Processing API
@@ -14,8 +16,18 @@ export async function POST(request: NextRequest) {
     const tenant = await prisma.tenant.findFirst();
     if (!tenant) return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
 
-    const { month, year } = await request.json();
+    const { month, year, overrides = {} } = await request.json();
     if (!month || !year) return NextResponse.json({ error: 'Month and Year are required' }, { status: 400 });
+
+    // --- FINANCIAL CONTROL: PERIOD LOCKING CHECK ---
+    const locked = await isPeriodLocked(new Date(parseInt(year), parseInt(month) - 1, 28));
+    if (locked) {
+      return NextResponse.json({ 
+        error: 'Periode ini sudah dikunci (Closed). Tidak dapat men-generate payroll dan jurnal untuk bulan yang telah difinalisasi.' 
+      }, { status: 403 });
+    }
+
+    const isDecember = month === 12;
 
     // 1. Transactional Payroll Execution
     const result = await prisma.$transaction(async (tx) => {
@@ -29,45 +41,94 @@ export async function POST(request: NextRequest) {
       const employees = await tx.employee.findMany({
         where: { tenantId: tenant.id, status: 'ACTIVE' }
       });
-      if (employees.length === 0) throw new Error(`No active employees found to process.`);
+      if (employees.length === 0) throw new Error(`No active employees found in Database under Tenant: ${tenant.name}.`);
 
       // 1.3 Calculate & Prepare Payroll Records
       let totalGross = 0;
       let totalPPh21 = 0;
       let totalNet = 0;
 
-      const payrollRecords = employees.map((emp) => {
-        const gross = emp.salary || 0;
-        const category = getTERCategory(emp.ptkpStatus || 'TK/0');
-        const { rate, pph21 } = calculatePPh21TER(gross, category);
-        const net = gross - pph21;
+      const payrollRecords = [];
 
-        totalGross += gross;
-        totalPPh21 += pph21;
+      for (const emp of employees) {
+        const overrideData = overrides[emp.id] || {};
+        const baseSalary = emp.salary || 0;
+        const allowances = Number(overrideData.allowances) || 0;
+        const jkkJkm = Math.round(baseSalary * 0.0054);
+        const thrBonus = Number(overrideData.thrBonus) || (isDecember ? baseSalary : 0);
+        const manualDeductions = Number(overrideData.deductions) || 0;
+        const iuranPensiun = Math.round(baseSalary * 0.01);
+        const totalDeductions = iuranPensiun + manualDeductions;
+        
+        const monthlyBruto = baseSalary + allowances;
+
+        let taxInput: any = {
+           isDecember,
+           ptkpStatus: emp.ptkpStatus || 'TK/0',
+           monthlyBruto: monthlyBruto,
+           monthlyJkkJkm: jkkJkm,
+           monthlyThrBonus: thrBonus,
+           monthlyIuranPensiun: iuranPensiun,
+           hasNpwp: !!emp.npwp
+        };
+
+        if (isDecember) {
+          const prevPayrolls = await tx.payroll.findMany({
+            where: {
+              employeeId: emp.id,
+              year: parseInt(year as any),
+              month: { lt: 12 },
+              status: 'COMPLETED'
+            }
+          });
+
+          taxInput.yearlyBrutoToDate = prevPayrolls.reduce((sum, p) => sum + p.grossPay + p.allowances, monthlyBruto);
+          taxInput.yearlyJkkJkmToDate = prevPayrolls.reduce((sum, p) => sum + p.jkkJkm, jkkJkm);
+          taxInput.yearlyThrBonusToDate = prevPayrolls.reduce((sum, p) => sum + p.thrBonus, thrBonus);
+          taxInput.yearlyIuranPensiunToDate = prevPayrolls.reduce((sum, p) => sum + p.iuranPensiun, iuranPensiun);
+          taxInput.pph21PaidJanNov = prevPayrolls.reduce((sum, p) => sum + p.pph21, 0);
+        }
+
+        const taxResult = calculatePPh21(taxInput);
+        const net = monthlyBruto + thrBonus - totalDeductions - taxResult.taxAmount;
+
+        totalGross += (monthlyBruto + thrBonus);
+        totalPPh21 += taxResult.taxAmount;
         totalNet += net;
 
-        return {
+        payrollRecords.push({
           employeeId: emp.id,
           month,
           year,
-          grossPay: gross,
-          pph21: pph21,
-          terCategory: category,
-          terRate: rate,
+          grossPay: baseSalary,
+          allowances: allowances,
+          thrBonus: thrBonus,
+          jkkJkm: jkkJkm,
+          deductions: manualDeductions,
+          iuranPensiun: iuranPensiun,
+          biayaJabatan: taxResult.biayaJabatan,
+          pkp: taxResult.pkp,
+          pph21: taxResult.taxAmount,
+          terCategory: taxResult.terCategory,
+          terRate: taxResult.terRate,
           netPay: net,
           status: 'COMPLETED',
           tenantId: tenant.id
-        };
-      });
+        });
+      }
 
       // 1.4 Batch Create Payrolls
       await tx.payroll.createMany({ data: payrollRecords });
 
       // 1.5 Ledger Posting (Standard Salary Journal)
-      // Account IDs (Static mappings from your COA Seed)
-      const SALARY_EXPENSE_ID = "d2baf1c2-cabc-4cca-a324-ad83bc7b16b5"; // 6003
-      const SALARY_PAYABLE_ID = "97541910-c31b-4e69-9ca3-715c97e171d3"; // 2003
-      const TAX_PAYABLE_ID = "ee3132f1-93bf-4c8e-9262-d48ba835d119";   // 2004
+      // Account IDs (Dynamically resolved by code)
+      const accSalaryExpense = await findAccountByCode(tenant.id, '6003', tx);
+      const accSalaryPayable = await findAccountByCode(tenant.id, '2003', tx);
+      const accTaxPayable = await findAccountByCode(tenant.id, '2004', tx);
+
+      if (!accSalaryExpense || !accSalaryPayable || !accTaxPayable) {
+        throw new Error(`Incomplete Chart of Accounts for Payroll. Please ensure codes 6003, 2003, 2004 exist.`);
+      }
 
       const journal = await tx.journalEntry.create({
         data: {
@@ -77,9 +138,9 @@ export async function POST(request: NextRequest) {
           tenantId: tenant.id,
           lines: {
             create: [
-              { accountId: SALARY_EXPENSE_ID, debit: totalGross, credit: 0 },
-              { accountId: SALARY_PAYABLE_ID, debit: 0, credit: totalNet },
-              { accountId: TAX_PAYABLE_ID, debit: 0, credit: totalPPh21 }
+              { accountId: accSalaryExpense.id, debit: totalGross, credit: 0 },
+              { accountId: accSalaryPayable.id, debit: 0, credit: totalNet },
+              { accountId: accTaxPayable.id, debit: 0, credit: totalPPh21 }
             ]
           }
         }
@@ -93,3 +154,54 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+/**
+ * Handle Unpost Payroll (Rollback)
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const tenant = await prisma.tenant.findFirst();
+    if (!tenant) return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
+
+    const url = new URL(request.url);
+    const month = parseInt(url.searchParams.get('month') || '0');
+    const year = parseInt(url.searchParams.get('year') || '0');
+
+    if (!month || !year) return NextResponse.json({ error: 'Month and Year parameters required' }, { status: 400 });
+
+    // --- FINANCIAL CONTROL: PERIOD LOCKING CHECK ---
+    const locked = await isPeriodLocked(new Date(year, month - 1, 28));
+    if (locked) {
+      return NextResponse.json({ 
+        error: 'Periode ini sudah dikunci (Closed). Tidak dapat menganulir (unpost) payroll untuk periode yang telah difinalisasi.' 
+      }, { status: 403 });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Delete associated auto-generated Journal Entry
+      const journalRef = `PAY-${year}${month}`;
+      const journal = await tx.journalEntry.findFirst({
+        where: { tenantId: tenant.id, reference: journalRef }
+      });
+      
+      if (journal) {
+        // Technically we should reverse the GL balances if `postToLedger` was used to increment them.
+        // However, the POST method currently does *not* auto-increment the `Account` table balances, 
+        // it just inserts JournalLines. If that changes, we need to add reversal logic here.
+        await tx.journalEntry.delete({ where: { id: journal.id } });
+      }
+
+      // 2. Delete Payroll Records
+      const deleteCount = await tx.payroll.deleteMany({
+        where: { tenantId: tenant.id, month, year }
+      });
+
+      return { journalDeleted: !!journal, payrollsDeleted: deleteCount.count };
+    });
+
+    return NextResponse.json({ success: true, ...result });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+

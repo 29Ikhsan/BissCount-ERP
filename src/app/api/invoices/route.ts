@@ -4,6 +4,8 @@ import { ensurePeriodOpen } from '@/lib/periodGuard'
 import { postToLedger, findAccountByCode } from '@/lib/ledgerUtility'
 import { calculateCOGS } from '@/lib/inventoryValuation'
 import { recordAudit } from '@/lib/audit'
+import { validateCreditLimit } from '@/lib/creditUtility'
+import { sendEmail, generateInvoiceTemplate } from '@/lib/mail'
 
 export async function POST(req: Request) {
   try {
@@ -11,7 +13,8 @@ export async function POST(req: Request) {
     const { 
       clientName, contactId, costCenterId, date, dueDate, items, 
       discountAmount = 0, fakturType = "Normal", transactionCode = "01",
-      additionalInfo, supportDoc, supportDocPeriod, facilityCap, sellerTkuId
+      additionalInfo, supportDoc, supportDocPeriod, facilityCap, sellerTkuId,
+      whtAmount = 0, whtRate = 0, autoEmail = false
     } = body
 
     if (!clientName || !date || !dueDate || !items || !Array.isArray(items)) {
@@ -27,13 +30,34 @@ export async function POST(req: Request) {
     const count = await prisma.invoice.count({ where: { tenantId: tenant.id } })
     const invoiceNo = `INV-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(count + 1).padStart(3, '0')}`
 
+    // --- FINANCIAL CONTROL: PRE-FLIGHT INVENTORY VALIDATION ---
+    // Prevent "Phantom Sales / Negative Inventory" Which Could Destroy COGS Valuation
+    for (const item of items) {
+      if (item.productId) {
+         const reqQty = Number(item.quantity) || 0;
+         const level = await prisma.inventoryLevel.findFirst({
+           where: { productId: item.productId }
+         });
+         
+         const availableQty = level ? level.quantity : 0;
+         if (reqQty > availableQty) {
+           return NextResponse.json({ 
+             error: `Overselling Prevented: Sisa stok tidak mencukupi. Anda mencoba menjual ${reqQty} unit, tapi stok tersisa hanya ${availableQty} unit.` 
+           }, { status: 400 });
+         }
+      }
+    }
+
     const newInvoice = await prisma.$transaction(async (tx) => {
       let subtotal = 0
       let totalTax = 0
 
       const invoiceItems = items.map((item: any) => {
         const itemSubtotal = (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)
-        const itemTax = itemSubtotal * ((Number(item.taxRate) || 0) / 100)
+        
+        // 12% PPN Compliance Core Logic
+        const explicitTaxRate = item.taxRate !== undefined ? Number(item.taxRate) : 12;
+        const itemTax = itemSubtotal * (explicitTaxRate / 100)
         
         subtotal += itemSubtotal
         totalTax += itemTax
@@ -44,7 +68,7 @@ export async function POST(req: Request) {
           quantity: Number(item.quantity) || 0,
           unitPrice: Number(item.unitPrice) || 0,
           taxId: item.taxId || null,
-          taxRate: Number(item.taxRate) || 0,
+          taxRate: explicitTaxRate,
           taxAmount: itemTax,
           total: itemSubtotal,
           productId: item.productId || null,
@@ -58,6 +82,14 @@ export async function POST(req: Request) {
       })
 
       const grandTotal = subtotal + totalTax - (Number(discountAmount) || 0)
+
+      // --- FINANCIAL CONTROL: CUSTOMER CREDIT GUARD ---
+      if (contactId) {
+        const credit = await validateCreditLimit(contactId, grandTotal);
+        if (!credit.allowed) {
+          throw new Error(`Credit Limit Exceeded: Hutang klien saat ini Rp ${credit.currentExposure.toLocaleString()} dan limit Rp ${credit.limit.toLocaleString()}. Sisa limit Rp ${credit.available.toLocaleString()} tidak mencukupi untuk invoice sebesar Rp ${grandTotal.toLocaleString()}.`);
+        }
+      }
 
       const invoice = await tx.invoice.create({
         data: {
@@ -83,9 +115,12 @@ export async function POST(req: Request) {
           supportDocPeriod,
           facilityCap,
           sellerTkuId: sellerTkuId || "0000000000000000000000",
+          whtAmount: Number(whtAmount) || 0,
+          whtRate: Number(whtRate) || 0,
+          autoEmail,
           items: { create: invoiceItems }
         },
-        include: { items: true }
+        include: { items: true, contact: true }
       })
 
       // 2. Automated Ledger Posting
@@ -148,6 +183,28 @@ export async function POST(req: Request) {
 
     // 3. Record Audit Log
     await recordAudit('CREATE', 'Invoice', newInvoice.id, tenant.id, undefined, { invoiceNo: newInvoice.invoiceNo, amount: newInvoice.grandTotal })
+
+    // --- AUTOMATED EMAIL DISPATCH ---
+    if (autoEmail && newInvoice.contact?.email) {
+      const emailHtml = generateInvoiceTemplate(newInvoice, tenant);
+      const mailResult = await sendEmail({
+        to: newInvoice.contact.email,
+        subject: `Invoice Baru dari ${tenant.name}: ${newInvoice.invoiceNo}`,
+        html: emailHtml
+      });
+
+      if (mailResult.success) {
+        await prisma.invoice.update({
+          where: { id: newInvoice.id },
+          data: { emailStatus: 'SENT' }
+        });
+      } else {
+        await prisma.invoice.update({
+          where: { id: newInvoice.id },
+          data: { emailStatus: 'FAILED' }
+        });
+      }
+    }
 
     return NextResponse.json({ success: true, invoice: newInvoice }, { status: 201 })
   } catch (error: any) {

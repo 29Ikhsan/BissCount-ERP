@@ -7,16 +7,17 @@ import {
   Target, 
   TrendingUp, 
   Zap, 
-  BarChart2, 
   ArrowRight, 
   Activity,
   Plus,
   Filter,
   MoreHorizontal,
   Globe,
-  PieChart
+  PieChart,
+  ChevronDown
 } from 'lucide-react';
 import Link from 'next/link';
+import RoleGuard from '@/components/common/RoleGuard';
 
 export default function CRMDashboard() {
   const [stats, setStats] = useState<any>(null);
@@ -35,7 +36,7 @@ export default function CRMDashboard() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [selectedMonth, selectedYear]);
+  }, [selectedMonth, setSelectedYear]);
 
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -45,20 +46,21 @@ export default function CRMDashboard() {
   if (loading) return (
     <div className={styles.loadingContainer}>
       <div className={styles.loader}></div>
-      <p>Analyzing Sales Intelligence for {months[selectedMonth-1]} {selectedYear}...</p>
+      <p>Synchronizing Sales Intelligence for {months[selectedMonth-1]} {selectedYear}...</p>
     </div>
   );
 
   return (
-    <div className={styles.container}>
+    <RoleGuard moduleKey="CRM">
+      <div className={styles.container}>
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <div className={styles.iconBox} style={{ backgroundColor: 'rgba(39, 156, 90, 0.1)' }}>
-            <Activity size={24} color="#279C5A"/>
+          <div className={styles.iconBox}>
+            <Activity size={28} color="#279C5A"/>
           </div>
           <div>
-            <h1 className={styles.title}>AKSIA CRM Command</h1>
+            <h1 className={styles.title}>CRM Intelligence</h1>
             <p className={styles.subtitle}>Institutional sales oversight for {months[selectedMonth-1]} {selectedYear}.</p>
           </div>
         </div>
@@ -76,10 +78,10 @@ export default function CRMDashboard() {
               value={selectedYear}
               onChange={(e) => setSelectedYear(parseInt(e.target.value))}
             >
-              {[2024, 2025, 2026, 2027, 2028].map(y => <option key={y} value={y}>{y}</option>)}
+              {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
             </select>
           </div>
-          <Link href="/crm/reports" className={styles.btnSecondary} style={{ marginRight: '10px' }}>
+          <Link href="/crm/reports" className={styles.btnSecondary}>
             <PieChart size={16}/> Intelligence
           </Link>
           <Link href="/crm/pipeline" className={styles.btnPrimary}>
@@ -91,7 +93,7 @@ export default function CRMDashboard() {
       {/* KPI Cards */}
       <div className={styles.kpiGrid}>
         <div className={styles.kpiCard}>
-          <div className={styles.kpiIcon}><Target size={22} color="#279C5A"/></div>
+          <div className={styles.kpiIcon}><Target size={24} color="#279C5A"/></div>
           <div className={styles.kpiInfo}>
             <span className={styles.kpiLabel}>GROSS PIPELINE</span>
             <span className={styles.kpiValue}>Rp {(stats?.totalPipeline || 0).toLocaleString()}</span>
@@ -100,29 +102,29 @@ export default function CRMDashboard() {
         </div>
 
         <div className={styles.kpiCard}>
-          <div className={styles.kpiIcon}><TrendingUp size={22} color="#3B82F6"/></div>
+          <div className={styles.kpiIcon}><TrendingUp size={24} color="#3B82F6"/></div>
           <div className={styles.kpiInfo}>
             <span className={styles.kpiLabel}>WEIGHTED REVENUE</span>
             <span className={styles.kpiValue}>Rp {(stats?.weightedPipeline || 0).toLocaleString()}</span>
-            <span className={styles.kpiSub}>ADJUSTED BY PROBABILITY</span>
+            <span className={styles.kpiSub}>PROBABILITY ADJUSTED</span>
           </div>
         </div>
 
         <div className={styles.kpiCard}>
-          <div className={styles.kpiIcon}><Users size={22} color="#10B981"/></div>
+          <div className={styles.kpiIcon}><Users size={24} color="#10B981"/></div>
           <div className={styles.kpiInfo}>
             <span className={styles.kpiLabel}>ACTIVE PROSPECTS</span>
             <span className={styles.kpiValue}>{stats?.activeLeads || 0}</span>
-            <span className={styles.kpiSub}>LIVE ENGAGEMENT</span>
+            <span className={styles.kpiSub}><div className={styles.pulse}></div> LIVE ENGAGEMENT</span>
           </div>
         </div>
 
         <Link href="/crm/campaigns" className={styles.kpiCard}>
-          <div className={styles.kpiIcon}><Globe size={22} color="#279C5A"/></div>
+          <div className={styles.kpiIcon}><Globe size={24} color="#279C5A"/></div>
           <div className={styles.kpiInfo}>
-            <span className={styles.kpiLabel}>AD CAMPAIGNS</span>
-            <span className={styles.kpiValue}>{stats?.campaignCount || 0}</span>
-            <span className={styles.kpiSub}>MARKETING ROI TRACKING</span>
+            <span className={styles.kpiLabel}>MARKETING ROI</span>
+            <span className={styles.kpiValue}>{stats?.campaignCount || 0} Active</span>
+            <span className={styles.kpiSub}>CAMPAIGN TRACKING</span>
           </div>
         </Link>
       </div>
@@ -141,8 +143,9 @@ export default function CRMDashboard() {
                 key={item.name} 
                 className={styles.funnelStage}
                 style={{ 
-                  width: `${100 - (i * 12)}%`, 
-                  background: item.color === '#3B82F6' ? '#279C5A' : item.color 
+                  width: `${100 - (i * 10)}%`, 
+                  background: item.color === '#3B82F6' ? '#279C5A' : item.color,
+                  opacity: 1 - (i * 0.1)
                 }}
               >
                 <span className={styles.stageName}>{item.name}</span>
@@ -156,7 +159,7 @@ export default function CRMDashboard() {
         <div className={styles.panel}>
           <div className={styles.panelHeader}>
             <h2 className={styles.panelTitle}>Active Opportunities</h2>
-            <Link href="/crm/pipeline" className={styles.viewAll}>Board View <ArrowRight size={14}/></Link>
+            <Link href="/crm/pipeline" className={styles.viewAll}>Full Pipeline <ArrowRight size={14}/></Link>
           </div>
           <div className={styles.dealList}>
             {Array.isArray(stats?.recentDeals) && stats.recentDeals.length > 0 ? (
@@ -179,5 +182,6 @@ export default function CRMDashboard() {
         </div>
       </div>
     </div>
+    </RoleGuard>
   );
 }

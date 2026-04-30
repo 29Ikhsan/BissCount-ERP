@@ -1,98 +1,145 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { isPeriodLocked } from '@/lib/closing-utils';
+import { findAccountByCode } from '@/lib/ledgerUtility';
 
-export async function POST(request: NextRequest) {
+export async function POST(req: Request) {
   try {
     const tenant = await prisma.tenant.findFirst();
     if (!tenant) return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
 
-    const body = await request.json();
+    const body = await req.json();
     const { month, year } = body;
 
-    const assets = await prisma.fixedAsset.findMany({
-      where: { tenantId: tenant.id, status: 'ACTIVE' }
-    });
-
-    if (assets.length === 0) {
-      return NextResponse.json({ error: 'No active assets found for depreciation' }, { status: 400 });
+    if (!month || !year) {
+      return NextResponse.json({ error: 'Month and Year parameters required' }, { status: 400 });
     }
 
-    // 1. Calculate Monthly Depreciation for all assets
-    const results = assets.map(asset => {
-      const monthlyDepr = (asset.cost - asset.residualValue) / asset.usefulLife;
-      return {
-        assetId: asset.id,
-        amount: monthlyDepr,
-        name: asset.name
-      };
-    });
+    const mInt = parseInt(month, 10);
+    const yInt = parseInt(year, 10);
+    const lastDayOfMonth = new Date(yInt, mInt, 0); // Last day of the requested month
 
-    const totalDepreciation = results.reduce((sum, res) => sum + res.amount, 0);
+    // 1. Check Period Lock
+    const locked = await isPeriodLocked(lastDayOfMonth);
+    if (locked) {
+      return NextResponse.json({ 
+        error: `Periode ${mInt}/${yInt} sudah dikunci. Tidak dapat mengeksekusi penyusutan aset (depreciation) untuk periode ini.` 
+      }, { status: 403 });
+    }
 
-    // 2. Perform Transactional Run (Atomically)
-    const run = await prisma.$transaction(async (tx) => {
-      // a. Create Depreciation Run record
-      const depreciationRun = await tx.depreciationRun.create({
-        data: {
-          month: Number(month),
-          year: Number(year),
+    // 2. Prevent Double Run
+    const existingRun = await prisma.depreciationRun.findUnique({
+      where: {
+        month_year_tenantId: {
+          month: mInt,
+          year: yInt,
           tenantId: tenant.id
         }
+      }
+    });
+
+    if (existingRun) {
+      return NextResponse.json({ error: `Penyusutan untuk bulan ${mInt}/${yInt} sudah pernah dieksekusi.` }, { status: 400 });
+    }
+
+    // 3. Get Active Assets
+    const activeAssets = await prisma.fixedAsset.findMany({
+      where: {
+        tenantId: tenant.id,
+        status: 'ACTIVE',
+        purchaseDate: { lte: lastDayOfMonth } // Has been purchased on or before this month
+      }
+    });
+
+    if (activeAssets.length === 0) {
+      return NextResponse.json({ message: 'Tidak ada aset aktif yang membutuhkan penyusutan.' }, { status: 200 });
+    }
+
+    // 4. Calculate Depreciation (Straight-Line)
+    let totalDepreciation = 0;
+    const historyRecords = [];
+    const dbUpdates = [];
+
+    for (const asset of activeAssets) {
+      // Prevent depreciating beyond Cost - Residual
+      const destructibleValue = asset.cost - asset.residualValue;
+      if (asset.accumulatedDepr >= destructibleValue) continue;
+
+      let monthlyDepr = destructibleValue / asset.usefulLife;
+      
+      // Handle the last month edge case
+      if (asset.accumulatedDepr + monthlyDepr > destructibleValue) {
+        monthlyDepr = destructibleValue - asset.accumulatedDepr;
+      }
+
+      totalDepreciation += monthlyDepr;
+
+      historyRecords.push({
+        assetId: asset.id,
+        amount: monthlyDepr,
+        month: mInt,
+        year: yInt,
+        tenantId: tenant.id
       });
 
-      // b. Create Histories and Update Asset Accumulated Depr
-      for (const res of results) {
-        await tx.depreciationHistory.create({
-          data: {
-            assetId: res.assetId,
-            amount: res.amount,
-            month: Number(month),
-            year: Number(year),
-            tenantId: tenant.id
+      // We queue the update to the asset's accumulated depreciation
+      dbUpdates.push(
+        prisma.fixedAsset.update({
+          where: { id: asset.id },
+          data: { accumulatedDepr: { increment: monthlyDepr } }
+        })
+      );
+    }
+
+    if (totalDepreciation === 0) {
+      return NextResponse.json({ message: 'Semua aset sudah susut maksimal (fully depreciated).' }, { status: 200 });
+    }
+
+    // 5. Setup Accounting Accounts
+    const accDeprExpense = await findAccountByCode(tenant.id, '6002');
+    const accAccumDepr = await findAccountByCode(tenant.id, '1501');
+
+    if (!accDeprExpense || !accAccumDepr) {
+      return NextResponse.json({ error: 'Pengaturan akun penyusutan (Beban 6002, Akumulasi 1501) tidak ditemukan.' }, { status: 500 });
+    }
+
+    // 6. Execute Transaction
+    await prisma.$transaction([
+      ...dbUpdates,
+      
+      // Create Run Record
+      prisma.depreciationRun.create({
+        data: {
+          month: mInt,
+          year: yInt,
+          tenantId: tenant.id,
+          histories: {
+            create: historyRecords
           }
-        });
+        }
+      }),
 
-        await tx.fixedAsset.update({
-          where: { id: res.assetId },
-          data: {
-            accumulatedDepr: { increment: res.amount }
+      // Create Ledger Entry
+      prisma.journalEntry.create({
+        data: {
+          date: lastDayOfMonth,
+          description: `Automatic Depreciation Run for ${mInt}/${yInt}`,
+          reference: `DEPR-${yInt}${String(mInt).padStart(2, '0')}`,
+          tenantId: tenant.id,
+          lines: {
+            create: [
+              { accountId: accDeprExpense.id, debit: totalDepreciation, credit: 0 },
+              { accountId: accAccumDepr.id, debit: 0, credit: totalDepreciation }
+            ]
           }
-        });
-      }
+        }
+      })
+    ]);
 
-      // c. POST TO LEDGER (Automated Double-Entry)
-      // We look for accounts: 6100 (Depr Expense) and 1700 (Accumulated Depr)
-      const deprExpenseAccount = await tx.account.findFirst({ where: { tenantId: tenant.id, code: '6100' } });
-      const accumDeprAccount = await tx.account.findFirst({ where: { tenantId: tenant.id, code: '1700' } });
-
-      if (deprExpenseAccount && accumDeprAccount) {
-        await tx.journalEntry.create({
-          data: {
-            date: new Date(year, month - 1, 28), // End of month
-            description: `Automated Depreciation Run - ${month}/${year}`,
-            reference: `DEPR-${month}-${year}`,
-            tenantId: tenant.id,
-            lines: {
-              create: [
-                { accountId: deprExpenseAccount.id, debit: totalDepreciation, credit: 0 },
-                { accountId: accumDeprAccount.id, debit: 0, credit: totalDepreciation }
-              ]
-            }
-          }
-        });
-      }
-
-      return depreciationRun;
-    });
-
-    return NextResponse.json({
-      message: 'Depreciation run successfully processed and posted to ledger.',
-      totalAmount: totalDepreciation,
-      assetCount: assets.length,
-      runId: run.id
-    });
+    return NextResponse.json({ success: true, totalDepreciation, assetsProcessed: historyRecords.length }, { status: 201 });
 
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Depreciation Run Error:', error);
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }

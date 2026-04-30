@@ -44,24 +44,8 @@ export default function PPhUnifikasi() {
     fetchData();
   }, [period]);
 
-  const exportCSV = () => {
-    const headers = ['NO', 'TANGGAL', 'PENERIMA_PENGHASILAN', 'NPWP_NIK', 'KODE_OBJEK_PAJAK', 'DPP', 'TARIF', 'PPH', 'NOMOR_BUPOT'];
-    
-    const rows = data.map((item, idx) => [
-      idx + 1, new Date(item.date).toLocaleDateString(), item.merchant, 'NPWP-REQUIRED', 
-      item.article === '23' ? '24-104-01' : '24-401-01', item.dpp, item.rate, item.pph, `BPT-${idx+1}`
-    ]);
-
-    let csvContent = "data:text/csv;charset=utf-8," 
-      + headers.join(",") + "\n"
-      + rows.map(e => e.join(",")).join("\n");
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `EBupot_Unifikasi_PPh_${period.month}_${period.year}.csv`);
-    document.body.appendChild(link);
-    link.click();
+  const exportCoreTax = () => {
+    window.open(`/api/taxation/export/bppu?month=${period.month}&year=${period.year}`, '_blank');
   };
 
   const filteredData = data.filter(item => 
@@ -87,8 +71,8 @@ export default function PPhUnifikasi() {
             <p className={styles.subtitle}>Consolidated withholding tax tracking for e-Bupot Unifikasi reporting.</p>
           </div>
         </div>
-        <button className={styles.btnPrimary} onClick={exportCSV}>
-          <Download size={16}/> Export e-Bupot CSV
+        <button className={styles.btnPrimary} onClick={exportCoreTax} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Download size={16}/> Export CoreTax BPPU (Excel)
         </button>
       </div>
 

@@ -15,7 +15,10 @@ import {
   X,
   RotateCcw,
   Ban,
-  Printer
+  Printer,
+  Edit,
+  Mail,
+  SendHorizontal
 } from 'lucide-react';
 import styles from './page.module.css';
 import { exportToCSV, triggerImport } from '@/lib/utils';
@@ -60,33 +63,51 @@ export default function OrderToCashHub() {
     return buckets.map(b => ({ ...b, percentage: total > 0 ? Math.round((b.amount / total) * 100) : 0 }));
   };
 
-  useEffect(() => {
-    const fetchLiveInvoices = async () => {
-      try {
-        const res = await fetch('/api/invoices');
-        const data = await res.json();
-        if (data.invoices && data.invoices.length > 0) {
-          const mapped = data.invoices.map((inv: any) => ({
-            _dbId: inv.id,  // keep real DB id for PATCH calls
-            id: inv.invoiceNo,
-            client: inv.clientName,
-            clientAvatar: inv.clientName.substring(0, 2).toUpperCase(),
-            clientBg: '#DBEAFE',
-            date: new Date(inv.date).toLocaleDateString(locale === 'id' ? 'id-ID' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-            dueDate: inv.dueDate,
-            amount: Number(inv.grandTotal ?? inv.amount),  // keep numeric
-            paidAmount: Number(inv.paidAmount) || 0,
-            status: inv.status,
-          }));
-          setInvoices(mapped);
-          setAgingSummary(buildAgingSummary(data.invoices));
-        }
-      } catch (err) {
-        console.error('Failed to fetch invoices', err);
+  const fetchLiveInvoices = async () => {
+    try {
+      const res = await fetch('/api/invoices');
+      const data = await res.json();
+      if (data.invoices && data.invoices.length > 0) {
+        const mapped = data.invoices.map((inv: any) => ({
+          _dbId: inv.id,  // keep real DB id for PATCH calls
+          id: inv.invoiceNo,
+          client: inv.clientName,
+          clientAvatar: inv.clientName.substring(0, 2).toUpperCase(),
+          clientBg: '#DBEAFE',
+          date: new Date(inv.date).toLocaleDateString(locale === 'id' ? 'id-ID' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          dueDate: inv.dueDate,
+          amount: Number(inv.grandTotal ?? inv.amount),  // keep numeric
+          paidAmount: Number(inv.paidAmount) || 0,
+          status: inv.status,
+          emailStatus: inv.emailStatus, // Track mail distribution status
+        }));
+        setInvoices(mapped);
+        setAgingSummary(buildAgingSummary(data.invoices));
       }
-    };
+    } catch (err) {
+      console.error('Failed to fetch invoices', err);
+    }
+  };
+
+  useEffect(() => {
     fetchLiveInvoices();
   }, [locale]);
+
+  const handleRunDunning = async () => {
+    if (!confirm("🚨 Execute Institutional Dunning Engine?\n\nThis action will sweep all overdue invoices, actively apply a 2% late fee penalty, and instantly post the revenue recognition journal to the ledger. This process cannot be undone.")) return;
+    try {
+      const res = await fetch('/api/finance/dunning/run', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+         showToast(data.message, 'success');
+         fetchLiveInvoices();
+      } else {
+         showToast(data.error || 'Dunning engine execution failed', 'error');
+      }
+    } catch (e) {
+       showToast('Server error during dunning scan.', 'error');
+    }
+  };
 
   // --- Pipeline Conversion Handlers ---
   const handleApproveQuotation = (id: string) => {
@@ -185,20 +206,11 @@ export default function OrderToCashHub() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ payment })
         });
-        const data = await res.json();
-        if (res.ok) {
-          const updated = data.invoice;
-          setInvoices(invoices.map(i => i.id === paymentModal.id ? {
-            ...i,
-            paidAmount: Number(updated.paidAmount),
-            status: updated.status
-          } : i));
-          showToast(`Pembayaran ${formatCurrency(payment)} dicatat untuk Invoice ${paymentModal.id}.`, 'success');
-          setPaymentModal(null);
-          setPaymentValue('');
-        } else {
-          showToast(`Gagal: ${data.error}`, 'error');
-        }
+        if (!res.ok) throw new Error('API Error');
+        await fetchLiveInvoices();
+        showToast(`Pembayaran ${formatCurrency(payment)} dicatat untuk Invoice ${paymentModal.id}.`, 'success');
+        setPaymentModal(null);
+        setPaymentValue('');
       } catch (e) {
         showToast('Koneksi gagal ke server.', 'error');
       }
@@ -216,6 +228,22 @@ export default function OrderToCashHub() {
       showToast(`Pembayaran ${formatCurrency(payment)} dicatat (Offline Mode).`, 'info', () => setInvoices(prevInvoices));
       setPaymentModal(null);
       setPaymentValue('');
+    }
+  };
+
+  const handleResendEmail = async (dbId: string, invoiceNo: string) => {
+    try {
+      showToast(`Mengirim email ${invoiceNo}...`, 'info');
+      const res = await fetch(`/api/invoices/${dbId}/email`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(`Email ${invoiceNo} berhasil dikirim ke klien!`, 'success');
+        fetchLiveInvoices(); // Refresh to update emailStatus badge
+      } else {
+        showToast(data.error || 'Gagal mengirim email.', 'error');
+      }
+    } catch (err) {
+      showToast('Gangguan jaringan saat mengirim email.', 'error');
     }
   };
 
@@ -244,6 +272,10 @@ export default function OrderToCashHub() {
     showToast(`Document ${id} has been cancelled.`, 'warning', () => {
        setTargetArray(prevArray);
     });
+  };
+
+  const handleEditDocument = (doc: any) => {
+    router.push(`/invoices/new?id=${doc._dbId}&type=${activeTab.toLowerCase()}`);
   };
 
   const handleNewDocument = () => {
@@ -304,6 +336,11 @@ export default function OrderToCashHub() {
         </div>
         
         <div className={styles.headerActions}>
+          {activeTab === 'INVOICES' && (
+             <button className={styles.exportBtn} style={{ backgroundColor: '#FEE2E2', color: '#EF4444', border: '1px solid #FCA5A5' }} onClick={handleRunDunning}>
+               <RotateCcw size={16} /> Run Auto-Dunning
+             </button>
+          )}
           <button className={styles.exportBtn} onClick={handleImportTrigger}>
             <Upload size={16} /> Import
           </button>
@@ -410,6 +447,7 @@ export default function OrderToCashHub() {
               <th>DATE</th>
               <th>LOGGED AMOUNT</th>
               <th>STATUS</th>
+              {activeTab === 'INVOICES' && <th>MAIL</th>}
               <th style={{ textAlign: 'center' }}>PIPELINE ACTION</th>
             </tr>
           </thead>
@@ -444,6 +482,13 @@ export default function OrderToCashHub() {
                     {doc.status}
                   </span>
                 </td>
+                {activeTab === 'INVOICES' && (
+                  <td>
+                    <span className={`${styles.statusBadge} ${styles[doc.emailStatus?.toLowerCase()] || styles.pending}`} style={{ fontSize: '0.6rem', padding: '4px 8px' }}>
+                      {doc.emailStatus === 'SENT' ? 'SENT' : (doc.emailStatus === 'FAILED' ? 'FAILED' : 'UNSENT')}
+                    </span>
+                  </td>
+                )}
                 <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
                   {doc.status !== 'CANCELLED' && doc.status !== 'PAID' && (
                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
@@ -473,6 +518,17 @@ export default function OrderToCashHub() {
                            Record Payment
                          </button>
                       )}
+                      {activeTab === 'INVOICES' && (
+                          <button className={styles.actionPdfBtn} style={{ color: '#8B5CF6', borderColor: '#C4B5FD' }} onClick={() => handleResendEmail(doc._dbId, doc.id)} title="Send via Email">
+                            <Mail size={14} /> Mail
+                          </button>
+                       )}
+
+                       {doc.status !== 'PAID' && doc.status !== 'CANCELLED' && (
+                         <button className={styles.actionEditBtn} onClick={() => handleEditDocument(doc)} title="Edit Document Details">
+                           <Edit size={14} /> Edit
+                         </button>
+                       )}
 
                       {/* Universal Cancel Button */}
                       <button className={styles.actionCancelBtn} onClick={() => handleCancelDocument(doc.id)} title="Cancel or Void Document">

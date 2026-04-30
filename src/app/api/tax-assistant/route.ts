@@ -80,7 +80,7 @@ ATURAN PENTING:
           return NextResponse.json({
             answer: text,
             category: contextResults[0]?.topic.category || 'AI_Generated',
-            categoryLabel: contextResults[0]?.topic.category ? categoryLabels[contextResults[0]?.topic.category] : 'DeepSeek AI Assistant',
+            categoryLabel: contextResults[0]?.topic.category ? categoryLabels[contextResults[0]?.topic.category] : 'FIRA AI Business Copilot',
             sources: contextResults[0]?.topic.references || [],
           });
         }

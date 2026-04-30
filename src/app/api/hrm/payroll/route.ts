@@ -19,6 +19,11 @@ export async function POST(request: NextRequest) {
       where: { tenantId: tenant.id, status: 'ACTIVE' }
     });
 
+    const attendances = await prisma.attendanceRecord.findMany({
+      where: { tenantId: tenant.id, month: parseInt(month), year: parseInt(year) }
+    });
+    const attMap = new Map(attendances.map(a => [a.employeeId, a]));
+
     // Bulk Calculation
     const payrollsToCreate = [];
     let totalGrossPay = 0;
@@ -26,16 +31,34 @@ export async function POST(request: NextRequest) {
     let totalNetPay = 0;
 
     for (const emp of employees) {
+      const att = attMap.get(emp.id);
+      let multiplier = 1;
+      let notes = `Generate Payroll ${month}/${year}`;
+      
+      if (att && att.totalWorkDays > 0) {
+          multiplier = att.presentDays / att.totalWorkDays;
+          notes += ` (Attendance: ${att.presentDays}/${att.totalWorkDays} Days)`;
+      } else {
+          notes += ` (Perfect Attendance Presumed)`;
+      }
+
       // Base Salary / Allowances / Deductions
-      const baseSalary = emp.salary;
-      const allowances = 0; // Default or configured per employee
-      const iuranPensiun = 200000; // Simulated flat pension deduction for demo 
+      const baseSalary = Math.round(emp.salary * multiplier);
+      const allowances = 0; 
+      
+      // DJP standard simulations
+      const jkkJkm = Math.round(baseSalary * 0.0054); // 0.54% JKK + JKM from Company
+      const thrBonus = isDecember ? baseSalary : 0; // Simulate end of year bonus for proofing A1
+      const iuranPensiun = Math.round(baseSalary * 0.01); // 1% JHT deduction
+      
       const monthlyBruto = baseSalary + allowances;
 
       let taxInput: any = {
         isDecember,
         ptkpStatus: emp.ptkpStatus || 'TK/0',
         monthlyBruto,
+        monthlyJkkJkm: jkkJkm,
+        monthlyThrBonus: thrBonus,
         monthlyIuranPensiun: iuranPensiun,
       };
 
@@ -51,12 +74,16 @@ export async function POST(request: NextRequest) {
         });
         
         const yearlyBrutoToDate = prevPayrolls.reduce((sum, p) => sum + p.grossPay + p.allowances, monthlyBruto);
+        const yearlyJkkJkmToDate = prevPayrolls.reduce((sum, p) => sum + p.jkkJkm, jkkJkm);
+        const yearlyThrBonusToDate = prevPayrolls.reduce((sum, p) => sum + p.thrBonus, thrBonus);
         const yearlyIuranPensiunToDate = prevPayrolls.reduce((sum, p) => sum + p.iuranPensiun, iuranPensiun);
         const pph21PaidJanNov = prevPayrolls.reduce((sum, p) => sum + p.pph21, 0);
 
         taxInput = {
           ...taxInput,
           yearlyBrutoToDate,
+          yearlyJkkJkmToDate,
+          yearlyThrBonusToDate,
           yearlyIuranPensiunToDate,
           pph21PaidJanNov
         };
@@ -64,7 +91,7 @@ export async function POST(request: NextRequest) {
 
       const taxResult = calculatePPh21(taxInput);
       
-      const netPay = monthlyBruto - iuranPensiun - taxResult.taxAmount;
+      const netPay = monthlyBruto + thrBonus - iuranPensiun - taxResult.taxAmount;
 
       payrollsToCreate.push({
         employeeId: emp.id,
@@ -72,6 +99,8 @@ export async function POST(request: NextRequest) {
         year: parseInt(year),
         grossPay: baseSalary,
         allowances,
+        thrBonus,
+        jkkJkm,
         deductions: iuranPensiun,
         iuranPensiun,
         biayaJabatan: taxResult.biayaJabatan,
@@ -81,7 +110,7 @@ export async function POST(request: NextRequest) {
         terRate: taxResult.terRate,
         netPay,
         status: 'CONFIRMED',
-        notes: `Generate Payroll ${month}/${year}`,
+        notes: notes,
         tenantId: tenant.id
       });
 

@@ -30,7 +30,7 @@ export default function NewExpenseForm() {
     contactId: '',
     date: '',
     reference: '',
-    paymentMethod: 'Corporate Card',
+    paymentMethod: 'CASH',
     currency: 'IDR',
   });
 
@@ -138,6 +138,7 @@ export default function NewExpenseForm() {
         merchant: formData.merchant,
         contactId: formData.contactId || undefined,
         items: items,
+        paymentMethod: formData.paymentMethod,
         notes: formData.reference,
         costCenterId: items[0]?.costCenter || undefined
       };
@@ -151,8 +152,12 @@ export default function NewExpenseForm() {
       const responseBody = await res.json();
       
       if (res.ok) {
-        showToast(`Expense request for ${formData.merchant} submitted successfully!`, 'success');
-        router.push('/expenses');
+        const msg = responseBody.expense.referenceCode 
+          ? `Expense submitted! Reference: ${responseBody.expense.referenceCode}`
+          : `Expense request for ${formData.merchant} submitted successfully!`;
+        showToast(msg, 'success');
+        // If bank transfer, maybe show a quick modal? For now, toast is fine.
+        setTimeout(() => router.push('/expenses'), 3000);
       } else {
         showToast(`Error: ${responseBody.error || 'Failed to record expense'}`, 'error');
       }
@@ -232,9 +237,8 @@ export default function NewExpenseForm() {
                   <Wallet size={14} className={styles.inputIcon} />
                   <select className={styles.inputSelect} 
                     value={formData.paymentMethod} onChange={e => setFormData({...formData, paymentMethod: e.target.value})}>
-                    <option>Corporate Card (xxx-1234)</option>
-                    <option>Cash (Reimbursement)</option>
-                    <option>Bank Transfer</option>
+                    <option value="CASH">Cash (Reimbursement)</option>
+                    <option value="BANK_TRANSFER">Bank Transfer (Vendor/ATK)</option>
                   </select>
                 </div>
               </div>

@@ -12755,6 +12755,7 @@ export namespace Prisma {
     paidAmount: number | null
     taxPeriod: number | null
     taxYear: number | null
+    lateFee: number | null
   }
 
   export type InvoiceSumAggregateOutputType = {
@@ -12765,6 +12766,7 @@ export namespace Prisma {
     paidAmount: number | null
     taxPeriod: number | null
     taxYear: number | null
+    lateFee: number | null
   }
 
   export type InvoiceMinAggregateOutputType = {
@@ -12792,6 +12794,10 @@ export namespace Prisma {
     supportDocPeriod: string | null
     facilityCap: string | null
     sellerTkuId: string | null
+    dunningStatus: string | null
+    lateFee: number | null
+    autoEmail: boolean | null
+    emailStatus: string | null
   }
 
   export type InvoiceMaxAggregateOutputType = {
@@ -12819,6 +12825,10 @@ export namespace Prisma {
     supportDocPeriod: string | null
     facilityCap: string | null
     sellerTkuId: string | null
+    dunningStatus: string | null
+    lateFee: number | null
+    autoEmail: boolean | null
+    emailStatus: string | null
   }
 
   export type InvoiceCountAggregateOutputType = {
@@ -12846,6 +12856,10 @@ export namespace Prisma {
     supportDocPeriod: number
     facilityCap: number
     sellerTkuId: number
+    dunningStatus: number
+    lateFee: number
+    autoEmail: number
+    emailStatus: number
     _all: number
   }
 
@@ -12858,6 +12872,7 @@ export namespace Prisma {
     paidAmount?: true
     taxPeriod?: true
     taxYear?: true
+    lateFee?: true
   }
 
   export type InvoiceSumAggregateInputType = {
@@ -12868,6 +12883,7 @@ export namespace Prisma {
     paidAmount?: true
     taxPeriod?: true
     taxYear?: true
+    lateFee?: true
   }
 
   export type InvoiceMinAggregateInputType = {
@@ -12895,6 +12911,10 @@ export namespace Prisma {
     supportDocPeriod?: true
     facilityCap?: true
     sellerTkuId?: true
+    dunningStatus?: true
+    lateFee?: true
+    autoEmail?: true
+    emailStatus?: true
   }
 
   export type InvoiceMaxAggregateInputType = {
@@ -12922,6 +12942,10 @@ export namespace Prisma {
     supportDocPeriod?: true
     facilityCap?: true
     sellerTkuId?: true
+    dunningStatus?: true
+    lateFee?: true
+    autoEmail?: true
+    emailStatus?: true
   }
 
   export type InvoiceCountAggregateInputType = {
@@ -12949,6 +12973,10 @@ export namespace Prisma {
     supportDocPeriod?: true
     facilityCap?: true
     sellerTkuId?: true
+    dunningStatus?: true
+    lateFee?: true
+    autoEmail?: true
+    emailStatus?: true
     _all?: true
   }
 
@@ -13063,6 +13091,10 @@ export namespace Prisma {
     supportDocPeriod: string | null
     facilityCap: string | null
     sellerTkuId: string | null
+    dunningStatus: string
+    lateFee: number
+    autoEmail: boolean
+    emailStatus: string
     _count: InvoiceCountAggregateOutputType | null
     _avg: InvoiceAvgAggregateOutputType | null
     _sum: InvoiceSumAggregateOutputType | null
@@ -13109,6 +13141,10 @@ export namespace Prisma {
     supportDocPeriod?: boolean
     facilityCap?: boolean
     sellerTkuId?: boolean
+    dunningStatus?: boolean
+    lateFee?: boolean
+    autoEmail?: boolean
+    emailStatus?: boolean
     contact?: boolean | Invoice$contactArgs<ExtArgs>
     costCenter?: boolean | Invoice$costCenterArgs<ExtArgs>
     tenant?: boolean | TenantDefaultArgs<ExtArgs>
@@ -13141,6 +13177,10 @@ export namespace Prisma {
     supportDocPeriod?: boolean
     facilityCap?: boolean
     sellerTkuId?: boolean
+    dunningStatus?: boolean
+    lateFee?: boolean
+    autoEmail?: boolean
+    emailStatus?: boolean
     contact?: boolean | Invoice$contactArgs<ExtArgs>
     costCenter?: boolean | Invoice$costCenterArgs<ExtArgs>
     tenant?: boolean | TenantDefaultArgs<ExtArgs>
@@ -13171,6 +13211,10 @@ export namespace Prisma {
     supportDocPeriod?: boolean
     facilityCap?: boolean
     sellerTkuId?: boolean
+    dunningStatus?: boolean
+    lateFee?: boolean
+    autoEmail?: boolean
+    emailStatus?: boolean
   }
 
   export type InvoiceInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -13219,6 +13263,10 @@ export namespace Prisma {
       supportDocPeriod: string | null
       facilityCap: string | null
       sellerTkuId: string | null
+      dunningStatus: string
+      lateFee: number
+      autoEmail: boolean
+      emailStatus: string
     }, ExtArgs["result"]["invoice"]>
     composites: {}
   }
@@ -13640,6 +13688,10 @@ export namespace Prisma {
     readonly supportDocPeriod: FieldRef<"Invoice", 'String'>
     readonly facilityCap: FieldRef<"Invoice", 'String'>
     readonly sellerTkuId: FieldRef<"Invoice", 'String'>
+    readonly dunningStatus: FieldRef<"Invoice", 'String'>
+    readonly lateFee: FieldRef<"Invoice", 'Float'>
+    readonly autoEmail: FieldRef<"Invoice", 'Boolean'>
+    readonly emailStatus: FieldRef<"Invoice", 'String'>
   }
     
 
@@ -41936,7 +41988,11 @@ export namespace Prisma {
     supportDoc: 'supportDoc',
     supportDocPeriod: 'supportDocPeriod',
     facilityCap: 'facilityCap',
-    sellerTkuId: 'sellerTkuId'
+    sellerTkuId: 'sellerTkuId',
+    dunningStatus: 'dunningStatus',
+    lateFee: 'lateFee',
+    autoEmail: 'autoEmail',
+    emailStatus: 'emailStatus'
   };
 
   export type InvoiceScalarFieldEnum = (typeof InvoiceScalarFieldEnum)[keyof typeof InvoiceScalarFieldEnum]
@@ -43183,6 +43239,10 @@ export namespace Prisma {
     supportDocPeriod?: StringNullableFilter<"Invoice"> | string | null
     facilityCap?: StringNullableFilter<"Invoice"> | string | null
     sellerTkuId?: StringNullableFilter<"Invoice"> | string | null
+    dunningStatus?: StringFilter<"Invoice"> | string
+    lateFee?: FloatFilter<"Invoice"> | number
+    autoEmail?: BoolFilter<"Invoice"> | boolean
+    emailStatus?: StringFilter<"Invoice"> | string
     contact?: XOR<ContactNullableRelationFilter, ContactWhereInput> | null
     costCenter?: XOR<CostCenterNullableRelationFilter, CostCenterWhereInput> | null
     tenant?: XOR<TenantRelationFilter, TenantWhereInput>
@@ -43214,6 +43274,10 @@ export namespace Prisma {
     supportDocPeriod?: SortOrderInput | SortOrder
     facilityCap?: SortOrderInput | SortOrder
     sellerTkuId?: SortOrderInput | SortOrder
+    dunningStatus?: SortOrder
+    lateFee?: SortOrder
+    autoEmail?: SortOrder
+    emailStatus?: SortOrder
     contact?: ContactOrderByWithRelationInput
     costCenter?: CostCenterOrderByWithRelationInput
     tenant?: TenantOrderByWithRelationInput
@@ -43248,6 +43312,10 @@ export namespace Prisma {
     supportDocPeriod?: StringNullableFilter<"Invoice"> | string | null
     facilityCap?: StringNullableFilter<"Invoice"> | string | null
     sellerTkuId?: StringNullableFilter<"Invoice"> | string | null
+    dunningStatus?: StringFilter<"Invoice"> | string
+    lateFee?: FloatFilter<"Invoice"> | number
+    autoEmail?: BoolFilter<"Invoice"> | boolean
+    emailStatus?: StringFilter<"Invoice"> | string
     contact?: XOR<ContactNullableRelationFilter, ContactWhereInput> | null
     costCenter?: XOR<CostCenterNullableRelationFilter, CostCenterWhereInput> | null
     tenant?: XOR<TenantRelationFilter, TenantWhereInput>
@@ -43279,6 +43347,10 @@ export namespace Prisma {
     supportDocPeriod?: SortOrderInput | SortOrder
     facilityCap?: SortOrderInput | SortOrder
     sellerTkuId?: SortOrderInput | SortOrder
+    dunningStatus?: SortOrder
+    lateFee?: SortOrder
+    autoEmail?: SortOrder
+    emailStatus?: SortOrder
     _count?: InvoiceCountOrderByAggregateInput
     _avg?: InvoiceAvgOrderByAggregateInput
     _max?: InvoiceMaxOrderByAggregateInput
@@ -43314,6 +43386,10 @@ export namespace Prisma {
     supportDocPeriod?: StringNullableWithAggregatesFilter<"Invoice"> | string | null
     facilityCap?: StringNullableWithAggregatesFilter<"Invoice"> | string | null
     sellerTkuId?: StringNullableWithAggregatesFilter<"Invoice"> | string | null
+    dunningStatus?: StringWithAggregatesFilter<"Invoice"> | string
+    lateFee?: FloatWithAggregatesFilter<"Invoice"> | number
+    autoEmail?: BoolWithAggregatesFilter<"Invoice"> | boolean
+    emailStatus?: StringWithAggregatesFilter<"Invoice"> | string
   }
 
   export type InvoiceItemWhereInput = {
@@ -46383,6 +46459,10 @@ export namespace Prisma {
     supportDocPeriod?: string | null
     facilityCap?: string | null
     sellerTkuId?: string | null
+    dunningStatus?: string
+    lateFee?: number
+    autoEmail?: boolean
+    emailStatus?: string
     contact?: ContactCreateNestedOneWithoutInvoicesInput
     costCenter?: CostCenterCreateNestedOneWithoutInvoicesInput
     tenant: TenantCreateNestedOneWithoutInvoicesInput
@@ -46414,6 +46494,10 @@ export namespace Prisma {
     supportDocPeriod?: string | null
     facilityCap?: string | null
     sellerTkuId?: string | null
+    dunningStatus?: string
+    lateFee?: number
+    autoEmail?: boolean
+    emailStatus?: string
     items?: InvoiceItemUncheckedCreateNestedManyWithoutInvoiceInput
   }
 
@@ -46439,6 +46523,10 @@ export namespace Prisma {
     supportDocPeriod?: NullableStringFieldUpdateOperationsInput | string | null
     facilityCap?: NullableStringFieldUpdateOperationsInput | string | null
     sellerTkuId?: NullableStringFieldUpdateOperationsInput | string | null
+    dunningStatus?: StringFieldUpdateOperationsInput | string
+    lateFee?: FloatFieldUpdateOperationsInput | number
+    autoEmail?: BoolFieldUpdateOperationsInput | boolean
+    emailStatus?: StringFieldUpdateOperationsInput | string
     contact?: ContactUpdateOneWithoutInvoicesNestedInput
     costCenter?: CostCenterUpdateOneWithoutInvoicesNestedInput
     tenant?: TenantUpdateOneRequiredWithoutInvoicesNestedInput
@@ -46470,6 +46558,10 @@ export namespace Prisma {
     supportDocPeriod?: NullableStringFieldUpdateOperationsInput | string | null
     facilityCap?: NullableStringFieldUpdateOperationsInput | string | null
     sellerTkuId?: NullableStringFieldUpdateOperationsInput | string | null
+    dunningStatus?: StringFieldUpdateOperationsInput | string
+    lateFee?: FloatFieldUpdateOperationsInput | number
+    autoEmail?: BoolFieldUpdateOperationsInput | boolean
+    emailStatus?: StringFieldUpdateOperationsInput | string
     items?: InvoiceItemUncheckedUpdateManyWithoutInvoiceNestedInput
   }
 
@@ -46498,6 +46590,10 @@ export namespace Prisma {
     supportDocPeriod?: string | null
     facilityCap?: string | null
     sellerTkuId?: string | null
+    dunningStatus?: string
+    lateFee?: number
+    autoEmail?: boolean
+    emailStatus?: string
   }
 
   export type InvoiceUpdateManyMutationInput = {
@@ -46522,6 +46618,10 @@ export namespace Prisma {
     supportDocPeriod?: NullableStringFieldUpdateOperationsInput | string | null
     facilityCap?: NullableStringFieldUpdateOperationsInput | string | null
     sellerTkuId?: NullableStringFieldUpdateOperationsInput | string | null
+    dunningStatus?: StringFieldUpdateOperationsInput | string
+    lateFee?: FloatFieldUpdateOperationsInput | number
+    autoEmail?: BoolFieldUpdateOperationsInput | boolean
+    emailStatus?: StringFieldUpdateOperationsInput | string
   }
 
   export type InvoiceUncheckedUpdateManyInput = {
@@ -46549,6 +46649,10 @@ export namespace Prisma {
     supportDocPeriod?: NullableStringFieldUpdateOperationsInput | string | null
     facilityCap?: NullableStringFieldUpdateOperationsInput | string | null
     sellerTkuId?: NullableStringFieldUpdateOperationsInput | string | null
+    dunningStatus?: StringFieldUpdateOperationsInput | string
+    lateFee?: FloatFieldUpdateOperationsInput | number
+    autoEmail?: BoolFieldUpdateOperationsInput | boolean
+    emailStatus?: StringFieldUpdateOperationsInput | string
   }
 
   export type InvoiceItemCreateInput = {
@@ -49719,6 +49823,11 @@ export namespace Prisma {
     not?: NestedIntFilter<$PrismaModel> | number
   }
 
+  export type BoolFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
+    not?: NestedBoolFilter<$PrismaModel> | boolean
+  }
+
   export type ContactNullableRelationFilter = {
     is?: ContactWhereInput | null
     isNot?: ContactWhereInput | null
@@ -49759,6 +49868,10 @@ export namespace Prisma {
     supportDocPeriod?: SortOrder
     facilityCap?: SortOrder
     sellerTkuId?: SortOrder
+    dunningStatus?: SortOrder
+    lateFee?: SortOrder
+    autoEmail?: SortOrder
+    emailStatus?: SortOrder
   }
 
   export type InvoiceAvgOrderByAggregateInput = {
@@ -49769,6 +49882,7 @@ export namespace Prisma {
     paidAmount?: SortOrder
     taxPeriod?: SortOrder
     taxYear?: SortOrder
+    lateFee?: SortOrder
   }
 
   export type InvoiceMaxOrderByAggregateInput = {
@@ -49796,6 +49910,10 @@ export namespace Prisma {
     supportDocPeriod?: SortOrder
     facilityCap?: SortOrder
     sellerTkuId?: SortOrder
+    dunningStatus?: SortOrder
+    lateFee?: SortOrder
+    autoEmail?: SortOrder
+    emailStatus?: SortOrder
   }
 
   export type InvoiceMinOrderByAggregateInput = {
@@ -49823,6 +49941,10 @@ export namespace Prisma {
     supportDocPeriod?: SortOrder
     facilityCap?: SortOrder
     sellerTkuId?: SortOrder
+    dunningStatus?: SortOrder
+    lateFee?: SortOrder
+    autoEmail?: SortOrder
+    emailStatus?: SortOrder
   }
 
   export type InvoiceSumOrderByAggregateInput = {
@@ -49833,6 +49955,7 @@ export namespace Prisma {
     paidAmount?: SortOrder
     taxPeriod?: SortOrder
     taxYear?: SortOrder
+    lateFee?: SortOrder
   }
 
   export type IntWithAggregatesFilter<$PrismaModel = never> = {
@@ -49849,6 +49972,14 @@ export namespace Prisma {
     _sum?: NestedIntFilter<$PrismaModel>
     _min?: NestedIntFilter<$PrismaModel>
     _max?: NestedIntFilter<$PrismaModel>
+  }
+
+  export type BoolWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
+    not?: NestedBoolWithAggregatesFilter<$PrismaModel> | boolean
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedBoolFilter<$PrismaModel>
+    _max?: NestedBoolFilter<$PrismaModel>
   }
 
   export type InvoiceRelationFilter = {
@@ -50602,11 +50733,6 @@ export namespace Prisma {
     tenantId?: SortOrder
   }
 
-  export type BoolFilter<$PrismaModel = never> = {
-    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
-    not?: NestedBoolFilter<$PrismaModel> | boolean
-  }
-
   export type JournalEntryNullableRelationFilter = {
     is?: JournalEntryWhereInput | null
     isNot?: JournalEntryWhereInput | null
@@ -50656,14 +50782,6 @@ export namespace Prisma {
 
   export type BankStatementLineSumOrderByAggregateInput = {
     amount?: SortOrder
-  }
-
-  export type BoolWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
-    not?: NestedBoolWithAggregatesFilter<$PrismaModel> | boolean
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedBoolFilter<$PrismaModel>
-    _max?: NestedBoolFilter<$PrismaModel>
   }
 
   export type FixedAssetCountOrderByAggregateInput = {
@@ -53294,6 +53412,10 @@ export namespace Prisma {
     divide?: number
   }
 
+  export type BoolFieldUpdateOperationsInput = {
+    set?: boolean
+  }
+
   export type ContactUpdateOneWithoutInvoicesNestedInput = {
     create?: XOR<ContactCreateWithoutInvoicesInput, ContactUncheckedCreateWithoutInvoicesInput>
     connectOrCreate?: ContactCreateOrConnectWithoutInvoicesInput
@@ -54574,10 +54696,6 @@ export namespace Prisma {
     connect?: BankStatementWhereUniqueInput
   }
 
-  export type BoolFieldUpdateOperationsInput = {
-    set?: boolean
-  }
-
   export type JournalEntryUpdateOneWithoutBankStatementLinesNestedInput = {
     create?: XOR<JournalEntryCreateWithoutBankStatementLinesInput, JournalEntryUncheckedCreateWithoutBankStatementLinesInput>
     connectOrCreate?: JournalEntryCreateOrConnectWithoutBankStatementLinesInput
@@ -55272,6 +55390,11 @@ export namespace Prisma {
     _max?: NestedFloatFilter<$PrismaModel>
   }
 
+  export type NestedBoolFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
+    not?: NestedBoolFilter<$PrismaModel> | boolean
+  }
+
   export type NestedIntWithAggregatesFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel>
     in?: number[] | ListIntFieldRefInput<$PrismaModel>
@@ -55286,6 +55409,14 @@ export namespace Prisma {
     _sum?: NestedIntFilter<$PrismaModel>
     _min?: NestedIntFilter<$PrismaModel>
     _max?: NestedIntFilter<$PrismaModel>
+  }
+
+  export type NestedBoolWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
+    not?: NestedBoolWithAggregatesFilter<$PrismaModel> | boolean
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedBoolFilter<$PrismaModel>
+    _max?: NestedBoolFilter<$PrismaModel>
   }
 
   export type NestedDateTimeNullableFilter<$PrismaModel = never> = {
@@ -55311,19 +55442,6 @@ export namespace Prisma {
     _count?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedDateTimeNullableFilter<$PrismaModel>
     _max?: NestedDateTimeNullableFilter<$PrismaModel>
-  }
-
-  export type NestedBoolFilter<$PrismaModel = never> = {
-    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
-    not?: NestedBoolFilter<$PrismaModel> | boolean
-  }
-
-  export type NestedBoolWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
-    not?: NestedBoolWithAggregatesFilter<$PrismaModel> | boolean
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedBoolFilter<$PrismaModel>
-    _max?: NestedBoolFilter<$PrismaModel>
   }
 
   export type AccountCreateWithoutTenantInput = {
@@ -55811,6 +55929,10 @@ export namespace Prisma {
     supportDocPeriod?: string | null
     facilityCap?: string | null
     sellerTkuId?: string | null
+    dunningStatus?: string
+    lateFee?: number
+    autoEmail?: boolean
+    emailStatus?: string
     contact?: ContactCreateNestedOneWithoutInvoicesInput
     costCenter?: CostCenterCreateNestedOneWithoutInvoicesInput
     items?: InvoiceItemCreateNestedManyWithoutInvoiceInput
@@ -55840,6 +55962,10 @@ export namespace Prisma {
     supportDocPeriod?: string | null
     facilityCap?: string | null
     sellerTkuId?: string | null
+    dunningStatus?: string
+    lateFee?: number
+    autoEmail?: boolean
+    emailStatus?: string
     items?: InvoiceItemUncheckedCreateNestedManyWithoutInvoiceInput
   }
 
@@ -56760,6 +56886,10 @@ export namespace Prisma {
     supportDocPeriod?: StringNullableFilter<"Invoice"> | string | null
     facilityCap?: StringNullableFilter<"Invoice"> | string | null
     sellerTkuId?: StringNullableFilter<"Invoice"> | string | null
+    dunningStatus?: StringFilter<"Invoice"> | string
+    lateFee?: FloatFilter<"Invoice"> | number
+    autoEmail?: BoolFilter<"Invoice"> | boolean
+    emailStatus?: StringFilter<"Invoice"> | string
   }
 
   export type JournalEntryUpsertWithWhereUniqueWithoutTenantInput = {
@@ -57571,6 +57701,10 @@ export namespace Prisma {
     supportDocPeriod?: string | null
     facilityCap?: string | null
     sellerTkuId?: string | null
+    dunningStatus?: string
+    lateFee?: number
+    autoEmail?: boolean
+    emailStatus?: string
     costCenter?: CostCenterCreateNestedOneWithoutInvoicesInput
     tenant: TenantCreateNestedOneWithoutInvoicesInput
     items?: InvoiceItemCreateNestedManyWithoutInvoiceInput
@@ -57600,6 +57734,10 @@ export namespace Prisma {
     supportDocPeriod?: string | null
     facilityCap?: string | null
     sellerTkuId?: string | null
+    dunningStatus?: string
+    lateFee?: number
+    autoEmail?: boolean
+    emailStatus?: string
     items?: InvoiceItemUncheckedCreateNestedManyWithoutInvoiceInput
   }
 
@@ -58907,6 +59045,10 @@ export namespace Prisma {
     supportDocPeriod?: string | null
     facilityCap?: string | null
     sellerTkuId?: string | null
+    dunningStatus?: string
+    lateFee?: number
+    autoEmail?: boolean
+    emailStatus?: string
     contact?: ContactCreateNestedOneWithoutInvoicesInput
     tenant: TenantCreateNestedOneWithoutInvoicesInput
     items?: InvoiceItemCreateNestedManyWithoutInvoiceInput
@@ -58936,6 +59078,10 @@ export namespace Prisma {
     supportDocPeriod?: string | null
     facilityCap?: string | null
     sellerTkuId?: string | null
+    dunningStatus?: string
+    lateFee?: number
+    autoEmail?: boolean
+    emailStatus?: string
     items?: InvoiceItemUncheckedCreateNestedManyWithoutInvoiceInput
   }
 
@@ -59633,6 +59779,10 @@ export namespace Prisma {
     supportDocPeriod?: string | null
     facilityCap?: string | null
     sellerTkuId?: string | null
+    dunningStatus?: string
+    lateFee?: number
+    autoEmail?: boolean
+    emailStatus?: string
     contact?: ContactCreateNestedOneWithoutInvoicesInput
     costCenter?: CostCenterCreateNestedOneWithoutInvoicesInput
     tenant: TenantCreateNestedOneWithoutInvoicesInput
@@ -59663,6 +59813,10 @@ export namespace Prisma {
     supportDocPeriod?: string | null
     facilityCap?: string | null
     sellerTkuId?: string | null
+    dunningStatus?: string
+    lateFee?: number
+    autoEmail?: boolean
+    emailStatus?: string
   }
 
   export type InvoiceCreateOrConnectWithoutItemsInput = {
@@ -59775,6 +59929,10 @@ export namespace Prisma {
     supportDocPeriod?: NullableStringFieldUpdateOperationsInput | string | null
     facilityCap?: NullableStringFieldUpdateOperationsInput | string | null
     sellerTkuId?: NullableStringFieldUpdateOperationsInput | string | null
+    dunningStatus?: StringFieldUpdateOperationsInput | string
+    lateFee?: FloatFieldUpdateOperationsInput | number
+    autoEmail?: BoolFieldUpdateOperationsInput | boolean
+    emailStatus?: StringFieldUpdateOperationsInput | string
     contact?: ContactUpdateOneWithoutInvoicesNestedInput
     costCenter?: CostCenterUpdateOneWithoutInvoicesNestedInput
     tenant?: TenantUpdateOneRequiredWithoutInvoicesNestedInput
@@ -59805,6 +59963,10 @@ export namespace Prisma {
     supportDocPeriod?: NullableStringFieldUpdateOperationsInput | string | null
     facilityCap?: NullableStringFieldUpdateOperationsInput | string | null
     sellerTkuId?: NullableStringFieldUpdateOperationsInput | string | null
+    dunningStatus?: StringFieldUpdateOperationsInput | string
+    lateFee?: FloatFieldUpdateOperationsInput | number
+    autoEmail?: BoolFieldUpdateOperationsInput | boolean
+    emailStatus?: StringFieldUpdateOperationsInput | string
   }
 
   export type ProductUpsertWithoutInvoiceItemsInput = {
@@ -67041,6 +67203,10 @@ export namespace Prisma {
     supportDocPeriod?: string | null
     facilityCap?: string | null
     sellerTkuId?: string | null
+    dunningStatus?: string
+    lateFee?: number
+    autoEmail?: boolean
+    emailStatus?: string
   }
 
   export type JournalEntryCreateManyTenantInput = {
@@ -67693,6 +67859,10 @@ export namespace Prisma {
     supportDocPeriod?: NullableStringFieldUpdateOperationsInput | string | null
     facilityCap?: NullableStringFieldUpdateOperationsInput | string | null
     sellerTkuId?: NullableStringFieldUpdateOperationsInput | string | null
+    dunningStatus?: StringFieldUpdateOperationsInput | string
+    lateFee?: FloatFieldUpdateOperationsInput | number
+    autoEmail?: BoolFieldUpdateOperationsInput | boolean
+    emailStatus?: StringFieldUpdateOperationsInput | string
     contact?: ContactUpdateOneWithoutInvoicesNestedInput
     costCenter?: CostCenterUpdateOneWithoutInvoicesNestedInput
     items?: InvoiceItemUpdateManyWithoutInvoiceNestedInput
@@ -67722,6 +67892,10 @@ export namespace Prisma {
     supportDocPeriod?: NullableStringFieldUpdateOperationsInput | string | null
     facilityCap?: NullableStringFieldUpdateOperationsInput | string | null
     sellerTkuId?: NullableStringFieldUpdateOperationsInput | string | null
+    dunningStatus?: StringFieldUpdateOperationsInput | string
+    lateFee?: FloatFieldUpdateOperationsInput | number
+    autoEmail?: BoolFieldUpdateOperationsInput | boolean
+    emailStatus?: StringFieldUpdateOperationsInput | string
     items?: InvoiceItemUncheckedUpdateManyWithoutInvoiceNestedInput
   }
 
@@ -67749,6 +67923,10 @@ export namespace Prisma {
     supportDocPeriod?: NullableStringFieldUpdateOperationsInput | string | null
     facilityCap?: NullableStringFieldUpdateOperationsInput | string | null
     sellerTkuId?: NullableStringFieldUpdateOperationsInput | string | null
+    dunningStatus?: StringFieldUpdateOperationsInput | string
+    lateFee?: FloatFieldUpdateOperationsInput | number
+    autoEmail?: BoolFieldUpdateOperationsInput | boolean
+    emailStatus?: StringFieldUpdateOperationsInput | string
   }
 
   export type JournalEntryUpdateWithoutTenantInput = {
@@ -68387,6 +68565,10 @@ export namespace Prisma {
     supportDocPeriod?: string | null
     facilityCap?: string | null
     sellerTkuId?: string | null
+    dunningStatus?: string
+    lateFee?: number
+    autoEmail?: boolean
+    emailStatus?: string
   }
 
   export type OpportunityCreateManyContactInput = {
@@ -68507,6 +68689,10 @@ export namespace Prisma {
     supportDocPeriod?: NullableStringFieldUpdateOperationsInput | string | null
     facilityCap?: NullableStringFieldUpdateOperationsInput | string | null
     sellerTkuId?: NullableStringFieldUpdateOperationsInput | string | null
+    dunningStatus?: StringFieldUpdateOperationsInput | string
+    lateFee?: FloatFieldUpdateOperationsInput | number
+    autoEmail?: BoolFieldUpdateOperationsInput | boolean
+    emailStatus?: StringFieldUpdateOperationsInput | string
     costCenter?: CostCenterUpdateOneWithoutInvoicesNestedInput
     tenant?: TenantUpdateOneRequiredWithoutInvoicesNestedInput
     items?: InvoiceItemUpdateManyWithoutInvoiceNestedInput
@@ -68536,6 +68722,10 @@ export namespace Prisma {
     supportDocPeriod?: NullableStringFieldUpdateOperationsInput | string | null
     facilityCap?: NullableStringFieldUpdateOperationsInput | string | null
     sellerTkuId?: NullableStringFieldUpdateOperationsInput | string | null
+    dunningStatus?: StringFieldUpdateOperationsInput | string
+    lateFee?: FloatFieldUpdateOperationsInput | number
+    autoEmail?: BoolFieldUpdateOperationsInput | boolean
+    emailStatus?: StringFieldUpdateOperationsInput | string
     items?: InvoiceItemUncheckedUpdateManyWithoutInvoiceNestedInput
   }
 
@@ -68563,6 +68753,10 @@ export namespace Prisma {
     supportDocPeriod?: NullableStringFieldUpdateOperationsInput | string | null
     facilityCap?: NullableStringFieldUpdateOperationsInput | string | null
     sellerTkuId?: NullableStringFieldUpdateOperationsInput | string | null
+    dunningStatus?: StringFieldUpdateOperationsInput | string
+    lateFee?: FloatFieldUpdateOperationsInput | number
+    autoEmail?: BoolFieldUpdateOperationsInput | boolean
+    emailStatus?: StringFieldUpdateOperationsInput | string
   }
 
   export type OpportunityUpdateWithoutContactInput = {
@@ -68997,6 +69191,10 @@ export namespace Prisma {
     supportDocPeriod?: string | null
     facilityCap?: string | null
     sellerTkuId?: string | null
+    dunningStatus?: string
+    lateFee?: number
+    autoEmail?: boolean
+    emailStatus?: string
   }
 
   export type JournalLineCreateManyCostCenterInput = {
@@ -69101,6 +69299,10 @@ export namespace Prisma {
     supportDocPeriod?: NullableStringFieldUpdateOperationsInput | string | null
     facilityCap?: NullableStringFieldUpdateOperationsInput | string | null
     sellerTkuId?: NullableStringFieldUpdateOperationsInput | string | null
+    dunningStatus?: StringFieldUpdateOperationsInput | string
+    lateFee?: FloatFieldUpdateOperationsInput | number
+    autoEmail?: BoolFieldUpdateOperationsInput | boolean
+    emailStatus?: StringFieldUpdateOperationsInput | string
     contact?: ContactUpdateOneWithoutInvoicesNestedInput
     tenant?: TenantUpdateOneRequiredWithoutInvoicesNestedInput
     items?: InvoiceItemUpdateManyWithoutInvoiceNestedInput
@@ -69130,6 +69332,10 @@ export namespace Prisma {
     supportDocPeriod?: NullableStringFieldUpdateOperationsInput | string | null
     facilityCap?: NullableStringFieldUpdateOperationsInput | string | null
     sellerTkuId?: NullableStringFieldUpdateOperationsInput | string | null
+    dunningStatus?: StringFieldUpdateOperationsInput | string
+    lateFee?: FloatFieldUpdateOperationsInput | number
+    autoEmail?: BoolFieldUpdateOperationsInput | boolean
+    emailStatus?: StringFieldUpdateOperationsInput | string
     items?: InvoiceItemUncheckedUpdateManyWithoutInvoiceNestedInput
   }
 
@@ -69157,6 +69363,10 @@ export namespace Prisma {
     supportDocPeriod?: NullableStringFieldUpdateOperationsInput | string | null
     facilityCap?: NullableStringFieldUpdateOperationsInput | string | null
     sellerTkuId?: NullableStringFieldUpdateOperationsInput | string | null
+    dunningStatus?: StringFieldUpdateOperationsInput | string
+    lateFee?: FloatFieldUpdateOperationsInput | number
+    autoEmail?: BoolFieldUpdateOperationsInput | boolean
+    emailStatus?: StringFieldUpdateOperationsInput | string
   }
 
   export type JournalLineUpdateWithoutCostCenterInput = {

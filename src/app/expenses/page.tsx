@@ -31,8 +31,9 @@ export default function Expenses() {
   const [expensesList, setExpensesList] = useState<any[]>([]);
   const [filterCategory, setFilterCategory] = useState('All Categories');
   const [isScanning, setIsScanning] = useState(false);
-  const [toast, setToast] = useState<{ visible: boolean, message: string } | null>(null);
+  const [toast, setToast] = useState<{ visible: boolean, message: string, isError?: boolean } | null>(null);
   const [selectedReview, setSelectedReview] = useState<any>(null);
+  const [complianceAlerts, setComplianceAlerts] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [masterData, setMasterData] = useState({ accounts: [] as any[], taxes: [] as any[], costCenters: [] as any[] });
 
@@ -72,9 +73,12 @@ export default function Expenses() {
           return {
             id: exp.id,
             date: dateObj.toLocaleDateString(locale === 'id' ? 'id-ID' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            dateRaw: dateObj,
             merchant: exp.merchant,
             category: exp.category,
+            status: exp.status,
             employee: exp.employeeName,
+            items: exp.items || [],
             netAmount: formatCurrency(exp.amount),
             taxAmount: formatCurrency(exp.taxAmount),
             whtAmount: formatCurrency(whtTotal),
@@ -82,6 +86,61 @@ export default function Expenses() {
             rawTotal: exp.grandTotal // For sorting if needed
           };
         });
+        
+        // --- WATCHDOG LOGIC ---
+        const alerts: any[] = [];
+        mapped.forEach((e: any) => {
+          if (e.status === 'PENDING' || e.status === 'APPROVED' || e.status === 'DRAFT') {
+            
+            // 1. Missing Categorization
+            const hasUncategorizedItem = e.items?.some((i: any) => !i.accountId && !i.categoryName);
+            if (hasUncategorizedItem || !e.category || e.items?.length === 0) {
+              alerts.push({
+                type: 'CRITICAL',
+                title: 'Missing Category (COA)',
+                desc: `${e.merchant} receipt misses breakdown categories. Cannot be posted to Ledger.`,
+                actionId: e.id,
+                actionLabel: 'ASSIGN COA'
+              });
+            }
+
+            // 2. Unreviewed AI Scan
+            if (e.merchant.includes('Scan Result:')) {
+              alerts.push({
+                type: 'WARNING',
+                title: 'Unreviewed AI Scan',
+                desc: `Expense auto-drafted from receipt scan needs human review.`,
+                actionId: e.id,
+                actionLabel: 'REVIEW NOW'
+              });
+            }
+
+            // 3. Bottleneck (Stuck > 5 days)
+            const daysOld = Math.floor((new Date().getTime() - e.dateRaw.getTime()) / (1000 * 3600 * 24));
+            if (daysOld >= 5 && e.status === 'PENDING') {
+               alerts.push({
+                type: 'WARNING',
+                title: 'Approval Bottleneck',
+                desc: `${e.merchant} request has been pending for ${daysOld} days.`,
+                actionId: e.id,
+                actionLabel: 'REVIEW'
+              });
+            }
+
+            // 4. Overdue Payment / Forgotten AP
+            if (daysOld >= 14 && e.status === 'APPROVED') {
+               alerts.push({
+                type: 'CRITICAL',
+                title: 'Overdue Payable (Hutang)',
+                desc: `Ledger posted 14+ days ago but never reconciled/paid.`,
+                actionId: e.id,
+                actionLabel: 'PAY NOW'
+              });
+            }
+          }
+        });
+        
+        setComplianceAlerts(alerts);
         setExpensesList(mapped);
       }
     } catch (e) {
@@ -120,13 +179,24 @@ export default function Expenses() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
+      
       if (res.ok) {
         setExpensesList(prev => prev.filter(e => e.id !== id));
         triggerToast(`Expense has been ${action}.`);
         setSelectedReview(null);
+      } else {
+        const errData = await res.json();
+        const errMessage = errData.error || 'Failed to update expense';
+        if (errMessage.includes('BUDGET_EXCEEDED')) {
+           setToast({ visible: true, message: `💳 BUDGET REJECTED: ${errMessage}`, isError: true });
+           setTimeout(() => setToast(null), 8000);
+        } else {
+           triggerToast(errMessage);
+        }
       }
     } catch (e) {
       console.error(e);
+      triggerToast('A network error occurred.');
     }
   };
 
@@ -197,7 +267,7 @@ export default function Expenses() {
         body: JSON.stringify({
           merchant: merchant || `Scan Result: ${file.name}`,
           date: date || new Date(),
-          employeeName: 'Ikhsan (via DeepSeek AI)',
+          employeeName: 'Ikhsan (via FIRA AI)',
           items: [{
               description: `Extracted from ${file.name}`,
               amount: total_amount || 0,
@@ -209,15 +279,22 @@ export default function Expenses() {
 
       if (res.ok) {
         setIsScanning(false);
-        triggerToast(`DeepSeek Scan Complete: Extracted ${merchant || 'data'} from ${file.name}`);
+        triggerToast(`FIRA Scan Complete: Extracted ${merchant || 'data'} from ${file.name}`);
         fetchLiveExpenses();
       } else {
         setIsScanning(false);
-        triggerToast("DeepSeek Extraction Error. Please try again.");
+        const errData = await res.json();
+        const errMessage = errData.error || 'FIRA Extraction Error. Please try again.';
+        if (errMessage.includes('BUDGET_EXCEEDED')) {
+           setToast({ visible: true, message: `💳 BUDGET REJECTED: ${errMessage}`, isError: true });
+           setTimeout(() => setToast(null), 8000);
+        } else {
+           triggerToast(errMessage);
+        }
       }
     } catch (err: any) {
       setIsScanning(false);
-      triggerToast(err.message || "Network error during DeepSeek scan.");
+      triggerToast(err.message || "Network error during FIRA scan.");
     }
   };
 
@@ -255,8 +332,8 @@ export default function Expenses() {
       </div>
 
       {toast?.visible && (
-        <div style={{ position: 'fixed', top: '20px', right: '20px', backgroundColor: '#10B981', color: 'white', padding: '12px 24px', borderRadius: '8px', zIndex: 1000, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Check size={18} /> {toast.message}
+        <div style={{ position: 'fixed', top: '20px', right: '20px', backgroundColor: toast.isError ? '#EF4444' : '#10B981', color: 'white', padding: '12px 24px', borderRadius: '8px', zIndex: 1000, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {toast.isError ? <ShieldIcon size={18} /> : <Check size={18} />} {toast.message}
         </div>
       )}
 
@@ -399,35 +476,30 @@ export default function Expenses() {
             </div>
             
             <div className={styles.complianceList}>
-              <div className={styles.complianceItem}>
-                <div className={`${styles.compDot} ${styles.dotRed}`}></div>
-                <div className={styles.compContent}>
-                  <div className={styles.compName}>Missing Tax ID</div>
-                  <div className={styles.compDesc}>United Airlines receipt is missing a valid VAT/Tax ID number for reimbursement.</div>
-                  <button className={styles.compAction}>REQUEST EDIT</button>
+              {complianceAlerts.length === 0 ? (
+                <div style={{ padding: '16px', textAlign: 'center', color: '#64748B', fontSize: '12px' }}>
+                  <ShieldCheck size={24} style={{ opacity: 0.5, marginBottom: '8px' }} />
+                  <br />All Clear! No anomalies detected by Watchdog.
                 </div>
-              </div>
-              
-              <div className={styles.complianceItem}>
-                <div className={`${styles.compDot} ${styles.dotGreen}`}></div>
-                <div className={styles.compContent}>
-                  <div className={styles.compName}>Auto-Policy Match</div>
-                  <div className={styles.compDesc}>CloudServer Pro matches the recurring 'IT Subscriptions' policy. Auto-approved.</div>
-                </div>
-              </div>
-
-              <div className={styles.complianceItem}>
-                <div className={`${styles.compDot} ${styles.dotGray}`}></div>
-                <div className={styles.compContent}>
-                  <div className={styles.compName}>Limit Warning</div>
-                  <div className={styles.compDesc}>Department 'Marketing' has reached 90% of its quarterly travel budget.</div>
-                </div>
-              </div>
+              ) : (
+                complianceAlerts.map((alert, idx) => (
+                  <div key={idx} className={styles.complianceItem}>
+                    <div className={`${styles.compDot} ${alert.type === 'CRITICAL' ? styles.dotRed : styles.dotOrange}`}></div>
+                    <div className={styles.compContent}>
+                      <div className={styles.compName}>{alert.title}</div>
+                      <div className={styles.compDesc}>{alert.desc}</div>
+                      <button 
+                        className={styles.compAction} 
+                        onClick={() => openReview(expensesList.find(e => e.id === alert.actionId))}
+                      >
+                        {alert.actionLabel}
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
-            
-            <button className={styles.policyBtn}>View Spending Policies</button>
           </div>
-
           <div className={styles.cardPromo}>
             <div className={styles.promoOverlay}></div>
             <div className={styles.promoContent}>
@@ -607,7 +679,7 @@ export default function Expenses() {
                  <div className={styles.attachmentCardModal}>
                     <h3 className={styles.summaryTitleLarge}>Attachments & Receipts</h3>
                     <div className={styles.aiVerificationBadge}>
-                       <BrainCircuit size={16} /> Verified by DeepSeek-V3
+                       <BrainCircuit size={16} /> Verified by FIRA AI Copilot
                     </div>
                     <div className={styles.receiptPreviewMock}>
                        <UploadCloud size={24} />

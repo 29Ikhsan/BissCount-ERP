@@ -12,9 +12,13 @@ import {
   Calendar,
   AlertTriangle,
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  Bot,
+  X,
+  FileDigit
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function BPPUHub() {
   const [data, setData] = useState<any[]>([]);
@@ -24,6 +28,8 @@ export default function BPPUHub() {
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear()
   });
+  const [selectedRecord, setSelectedRecord] = useState<any>(null);
+  const router = useRouter();
 
   const fetchData = () => {
     setLoading(true);
@@ -184,13 +190,79 @@ export default function BPPUHub() {
                         </span>
                      </td>
                      <td className={styles.textRight}>
-                        <button className={styles.moreBtn}><ChevronRight size={16}/></button>
+                        <button className={styles.moreBtn} onClick={() => setSelectedRecord(exp)}><ChevronRight size={16}/></button>
                      </td>
                   </tr>
                ))}
             </tbody>
          </table>
       </div>
+
+      {/* PPh Unifikasi Detail Modal */}
+      {selectedRecord && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div className={styles.iconBox} style={{ backgroundColor: '#DBEAFE' }}><Activity size={20} color="#1E40AF"/></div>
+                <div>
+                  <h2 className={styles.modalTitle}>Withholding Realization</h2>
+                  <p className={styles.modalSubtitle}>Institutional audit for PPh Unifikasi (BPPU) compliance.</p>
+                </div>
+              </div>
+              <button className={styles.closeBtn} onClick={() => setSelectedRecord(null)}><X size={20}/></button>
+            </div>
+
+            <div className={styles.modalBody}>
+               <div className={styles.detailGrid}>
+                  <div className={styles.detailRow}>
+                    <span className={styles.detailLabel}>Merchant / Recipient</span>
+                    <span className={styles.detailValue}>{selectedRecord.merchant}</span>
+                  </div>
+                  <div className={styles.detailRow}>
+                    <span className={styles.detailLabel}>DJP Identity (NPWP)</span>
+                    <span className={styles.detailValue}>{selectedRecord.identity}</span>
+                  </div>
+                  <div className={styles.detailRow}>
+                    <span className={styles.detailLabel}>Transaction Date</span>
+                    <span className={styles.detailValue}>{new Date(selectedRecord.date).toLocaleDateString()}</span>
+                  </div>
+                  <div className={styles.detailRow}>
+                    <span className={styles.detailLabel}>Reference ID</span>
+                    <span className={styles.detailValue}>{selectedRecord.id.slice(0, 12)}...</span>
+                  </div>
+               </div>
+
+               <div className={styles.financialSummary}>
+                  <div className={styles.finRow}>
+                     <span>Non-Taxable Base (DPP)</span>
+                     <span>Rp {selectedRecord.gross.toLocaleString()}</span>
+                  </div>
+                  <div className={styles.finRow} style={{ borderTop: '1px solid #E2E8F0', paddingTop: '12px', marginTop: '12px', fontWeight: 800 }}>
+                     <span>Withheld Tax (PPh)</span>
+                     <span style={{ color: '#279C5A' }}>Rp {selectedRecord.wht.toLocaleString()}</span>
+                  </div>
+               </div>
+
+               <div className={styles.taraIntegration}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                    <Bot size={18} color="#279C5A"/>
+                    <span style={{ fontSize: '12px', fontWeight: 800, color: '#1E293B' }}>ASK TARA INTELLIGENCE</span>
+                  </div>
+                  <p style={{ fontSize: '11px', color: '#64748B', marginBottom: '16px' }}>
+                     Unsure about Article 23 or 4(2) classification for this transaction? TARA handles the latest 2026 CoreTax rules.
+                  </p>
+                  <button 
+                    className={styles.taraBtn}
+                    onClick={() => router.push(`/tax-assistant?q=Explain withholding tax article for recipient ${selectedRecord.merchant}`)}
+                  >
+                     Consult TARA <Activity size={14}/>
+                  </button>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -41,6 +41,7 @@ export async function POST(req: Request) {
         idType,
         idNumber: idNumber || null,
         tkuId,
+        creditLimit: Number(body.creditLimit) || 0,
         tenantId: tenant.id
       }
     })
@@ -110,7 +111,7 @@ export async function GET() {
         balance: balance,
         receivables,
         payables,
-        creditLimit: contact.role === 'Customer' || contact.role === 'Both' ? 100000 : 0,
+        creditLimit: contact.creditLimit || 0,
         color,
         bg,
       }

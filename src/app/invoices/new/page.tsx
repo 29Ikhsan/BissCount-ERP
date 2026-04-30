@@ -30,9 +30,20 @@ function DocumentFormBody() {
   const [downpayment, setDownpayment] = useState(0);
   const [dpRate, setDpRate] = useState(0);
   const [isVatTaxable, setIsVatTaxable] = useState(false);
+  const [invoiceNo, setInvoiceNo] = useState('');
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [autoEmail, setAutoEmail] = useState(true); // Default to on for efficiency
+
   useEffect(() => {
     const type = searchParams.get('type');
+    const id = searchParams.get('id');
     if (type) setDocType(type.toUpperCase());
+    if (id) {
+      setIsEditMode(true);
+      setEditId(id);
+    }
   }, [searchParams]);
 
   const [clientId, setClientId] = useState('');
@@ -78,6 +89,52 @@ function DocumentFormBody() {
     }
     loadData();
   }, []);
+
+  // Fetch data for Edit Mode
+  useEffect(() => {
+    if (isEditMode && editId) {
+      async function fetchDocument() {
+        setIsLoading(true);
+        try {
+          const res = await fetch(`/api/invoices/${editId}`);
+          const data = await res.json();
+          if (data.invoice) {
+             const inv = data.invoice;
+             setDocType(inv.status === 'QUOTATION' ? 'QUOTATION' : 'INVOICE');
+             setInvoiceNo(inv.invoiceNo || '');
+             setClientName(inv.clientName);
+             setClientId(inv.contactId || 'manual');
+             setSelectedCostCenter(inv.costCenterId || '');
+             setDate(new Date(inv.date).toISOString().split('T')[0]);
+             setDueDate(new Date(inv.dueDate).toISOString().split('T')[0]);
+             setDiscount(inv.discountAmount || 0);
+             setIsVatTaxable(inv.isVatTaxable || false);
+             setWht(inv.whtAmount || 0);
+             setWhtRate(inv.whtRate || 0);
+             setAutoEmail(inv.autoEmail || false);
+             
+             if (inv.items && inv.items.length > 0) {
+               setItems(inv.items.map((item: any) => ({
+                 id: item.id,
+                 productId: item.productId || '',
+                 description: item.description,
+                 quantity: item.quantity,
+                 unitPrice: item.unitPrice,
+                 taxId: item.taxId || '',
+                 taxRate: item.taxRate || 0,
+                 total: item.total
+               })));
+             }
+          }
+        } catch (e) {
+          showToast('Failed to load document for editing.', 'error');
+        } finally {
+          setIsLoading(false);
+        }
+      }
+      fetchDocument();
+    }
+  }, [isEditMode, editId]);
 
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [dueDate, setDueDate] = useState(new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0]);
@@ -155,13 +212,17 @@ function DocumentFormBody() {
         costCenterId: selectedCostCenter || undefined,
         date: new Date(date).toISOString(),
         dueDate: new Date(dueDate).toISOString(),
+        invoiceNo: invoiceNo || undefined, // Send to API if present
         items,
         discountAmount: discount,
-        isVatTaxable: isVatTaxable
+        isVatTaxable: isVatTaxable,
+        whtAmount: wht,
+        whtRate: whtRate,
+        autoEmail: autoEmail
       };
 
-      const res = await fetch('/api/invoices', {
-        method: 'POST',
+      const res = await fetch(isEditMode ? `/api/invoices/${editId}` : '/api/invoices', {
+        method: isEditMode ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
@@ -169,7 +230,7 @@ function DocumentFormBody() {
       const responseBody = await res.json();
       
       if (res.ok) {
-        showToast(`${docType} created successfully (Invoice No: ${responseBody.invoice?.invoiceNo})!`, 'success');
+        showToast(`${docType} ${isEditMode ? 'updated' : 'created'} successfully!`, 'success');
         router.push('/invoices');
       } else {
         showToast(`Error: ${responseBody.error || 'Failed to generate document'}`, 'error');
@@ -207,8 +268,12 @@ function DocumentFormBody() {
             <FileText size={24} color="#0F3B8C" />
           </div>
           <div>
-            <h1 className={styles.formTitle}>Create New {docType.replace('_', ' ')}</h1>
-            <p className={styles.formSubtitle}>Masukkan detail klien dan transaksi untuk merekam dokumen ini secara resmi.</p>
+            <h1 className={styles.formTitle}>{isEditMode ? 'Edit' : 'Create New'} {docType.replace('_', ' ')}</h1>
+            <p className={styles.formSubtitle}>
+              {isEditMode 
+                ? 'Perbarui detail dokumen Anda di bawah ini untuk memperbaiki kesalahan.' 
+                : 'Masukkan detail klien dan transaksi untuk merekam dokumen ini secara resmi.'}
+            </p>
           </div>
         </div>
 
@@ -277,6 +342,19 @@ function DocumentFormBody() {
            </div>
         </div>
 
+         <div style={{ marginBottom: '24px', backgroundColor: '#F0FDF4', padding: '16px', borderRadius: '12px', border: '1px solid #BBF7D0', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <input 
+              type="checkbox" 
+              id="autoEmail" 
+              style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+              checked={autoEmail} 
+              onChange={(e) => setAutoEmail(e.target.checked)} 
+            />
+            <label htmlFor="autoEmail" style={{ fontSize: '14px', fontWeight: 700, color: '#166534', cursor: 'pointer' }}>
+               Kirim invoice ke email klien secara otomatis setelah disimpan (Automated Dispatch) 📧⚡
+            </label>
+         </div>
+
         <div className={styles.splitGridTriple}>
            <div className={styles.inputGroup}>
              <label>Document Date</label>
@@ -286,10 +364,16 @@ function DocumentFormBody() {
              <label>Valid Until / Due Date</label>
              <input type="date" className={styles.inputText} value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
            </div>
-           <div className={styles.inputGroup}>
-             <label>Reference #</label>
-             <input type="text" className={styles.inputText} placeholder="e.g. PO-78291" />
-           </div>
+            <div className={styles.inputGroup}>
+              <label>Reference # (ID)</label>
+              <input 
+                type="text" 
+                className={styles.inputText} 
+                placeholder="e.g. INV-2026-001" 
+                value={invoiceNo}
+                onChange={(e) => setInvoiceNo(e.target.value)}
+              />
+            </div>
         </div>
 
         <hr className={styles.divider} />

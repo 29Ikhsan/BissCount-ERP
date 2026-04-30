@@ -3,25 +3,23 @@
 import React, { useEffect, useState } from 'react';
 import styles from './page.module.css';
 import { 
-  Package, 
   Plus, 
   Play, 
   CheckCircle, 
   Settings, 
   Search, 
-  Filter, 
-  ArrowRight,
-  TrendingDown,
+  Layers, 
+  Activity,
+  Cpu,
+  ShieldCheck,
+  ArrowUpRight,
   TrendingUp,
   Box,
-  Layout,
-  Layers,
-  ArrowUpRight
+  X
 } from 'lucide-react';
 import Link from 'next/link';
 
 import LedgerPulse from '@/components/accounting/LedgerPulse';
-import { X } from 'lucide-react';
 
 export default function ProductionDashboard() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -107,8 +105,7 @@ export default function ProductionDashboard() {
   };
 
   if (loading) return (
-    <div className={styles.loadingContainer}>
-      <div className={styles.loader}></div>
+    <div className={styles.loading}>
       <p>Synchronizing AKSIA Workshop Floor...</p>
     </div>
   );
@@ -118,8 +115,8 @@ export default function ProductionDashboard() {
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <div className={styles.iconBox} style={{ backgroundColor: 'rgba(39, 156, 90, 0.1)' }}>
-            <Layers size={24} color="#279C5A"/>
+          <div className={styles.iconBox}>
+            <Cpu size={24} color="#279C5A"/>
           </div>
           <div>
             <h1 className={styles.title}>AKSIA Manufacturing</h1>
@@ -127,7 +124,9 @@ export default function ProductionDashboard() {
           </div>
         </div>
         <div className={styles.headerRight}>
-          <Link href="/production/bom" className={styles.btnSecondary}><Settings size={16}/> BOM Registry</Link>
+          <Link href="/production/bom" className={styles.btnSecondary}>
+            <Settings size={16}/> BOM Registry
+          </Link>
           <button className={styles.btnPrimary} onClick={() => setIsModalOpen(true)}>
             <Plus size={16}/> Create Work Order
           </button>
@@ -140,20 +139,20 @@ export default function ProductionDashboard() {
           <div className={styles.statsBar}>
             <div className={styles.statCard}>
               <div className={styles.statIcon} style={{ background: 'rgba(39, 156, 90, 0.1)' }}>
-                <TrendingUp size={18} color="#279C5A"/>
+                <TrendingUp size={20} color="#279C5A"/>
               </div>
               <div className={styles.statInfo}>
                  <span className={styles.statLabel}>YIELD QUALITY</span>
-                 <span className={styles.statValue}>98.4%</span>
+                 <span className={styles.statValue}>98.4% <span style={{fontSize: '11px', color: '#10B981', marginLeft: '4px'}}>↗ 1.2%</span></span>
               </div>
             </div>
             <div className={styles.statCard}>
               <div className={styles.statIcon} style={{ background: 'rgba(59, 130, 246, 0.1)' }}>
-                <Layers size={18} color="#3B82F6"/>
+                <Layers size={20} color="#3B82F6"/>
               </div>
               <div className={styles.statInfo}>
                  <span className={styles.statLabel}>ACTIVE RUNS</span>
-                 <span className={styles.statValue}>{orders.filter(o => o.status === 'IN_PROGRESS').length}</span>
+                 <span className={styles.statValue}>{orders.filter(o => o.status === 'IN_PROGRESS').length} <span style={{fontSize: '11px', color: '#64748B', fontWeight: 500, marginLeft: '4px'}}>Concurrent</span></span>
               </div>
             </div>
           </div>
@@ -166,7 +165,7 @@ export default function ProductionDashboard() {
                   <span className={styles.liveIndicator}>LIVE TRACKING</span>
                </div>
                <div className={styles.searchBox}>
-                  <Search size={14} color="#94A3B8"/>
+                  <Search size={16} color="#94A3B8" style={{position: 'absolute', left: '14px', top: '12px'}}/>
                   <input type="text" placeholder="Filter orders..." className={styles.searchInput}/>
                </div>
             </div>
@@ -198,18 +197,18 @@ export default function ProductionDashboard() {
                       <div className={styles.actions}>
                         {order.status === 'PLANNED' && (
                           <button className={styles.startBtn} onClick={() => startProduction(order.id)}>
-                            Launch <Play size={14}/>
+                            Launch Cycle <Play size={12} fill="white"/>
                           </button>
                         )}
                         {order.status === 'IN_PROGRESS' && (
                           <button className={styles.completeBtn} onClick={() => completeProduction(order.id)}>
-                            Finalize <CheckCircle size={14}/>
+                            Finalize Run <ArrowUpRight size={14}/>
                           </button>
                         )}
                         {order.status === 'COMPLETED' && (
                           <div className={styles.successMeta}>
-                             <CheckCircle size={14} color="#279C5A"/>
-                             <span style={{ color: '#279C5A', fontWeight: 700 }}>Invoiced to Asset</span>
+                             <ShieldCheck size={16} />
+                             <span>Ledger Locked</span>
                           </div>
                         )}
                       </div>
@@ -218,13 +217,26 @@ export default function ProductionDashboard() {
                 ))}
               </tbody>
             </table>
+            
+            {orders.length === 0 && (
+              <div className={styles.emptyState}>
+                <Box size={48} className={styles.emptyIcon} />
+                <h3 className={styles.emptyTitle}>Queue Clear</h3>
+                <p className={styles.emptyDesc}>No active production cycles scheduled for the current shift.</p>
+                <button className={styles.btnPrimary} style={{marginTop: '16px', fontSize: '12px'}} onClick={() => setIsModalOpen(true)}>
+                  Schedule Work Order
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Right Sidebar: Ledger Pulse */}
         <div className={styles.rightCol}>
            <div className={styles.sidebarSection}>
-              <h3 className={styles.sidebarTitle}>Financial Integrity</h3>
+              <h3 className={styles.sidebarTitle}>
+                 <Activity size={18} color="#279C5A" /> Financial Integrity
+              </h3>
               <LedgerPulse />
            </div>
            
@@ -292,8 +304,8 @@ export default function ProductionDashboard() {
                 </div>
               </div>
               <div className={styles.modalFooter}>
-                <button type="button" className={styles.cancelBtn} onClick={() => setIsModalOpen(false)}>Cancel</button>
-                <button type="submit" className={styles.submitBtn} disabled={isSubmitting}>
+                <button type="button" className={styles.btnSecondary} onClick={() => setIsModalOpen(false)}>Cancel</button>
+                <button type="submit" className={styles.btnPrimary} style={{width: 'auto'}} disabled={isSubmitting}>
                   {isSubmitting ? 'Scheduling...' : 'Launch Cycle'}
                 </button>
               </div>

@@ -75,9 +75,13 @@ export async function POST(req: Request) {
         const accTax = await findAccountByCode(tenant.id, '2002', tx)
 
         if (accAP && accInv) {
-          // Ensure Journal Entry balances
+          // --- FINANCIAL CONTROL: PURCHASE DISCOUNT ACCOUNTING SEAL ---
+          // Ensure the discount is prorated across the inventory value so that AP matches the actual grandTotal
+          const discount = Number(discountAmount) || 0;
+          const discountedSubtotal = Math.max(0, subtotal - discount);
+
           const taxDebit = (totalTax > 0 && accTax) ? totalTax : 0
-          const apCredit = subtotal + taxDebit
+          const apCredit = discountedSubtotal + taxDebit // AP exactly mirrors what we actually owe (grandTotal)
 
           await postToLedger(tx, {
             date: new Date(date),
@@ -85,7 +89,7 @@ export async function POST(req: Request) {
             reference: poNumber,
             tenantId: tenant.id,
             lines: [
-              { accountId: accInv.id, debit: subtotal, credit: 0 },
+              { accountId: accInv.id, debit: discountedSubtotal, credit: 0 },
               { accountId: accAP.id, debit: 0, credit: apCredit },
               ...(taxDebit > 0 && accTax ? [{ accountId: accTax.id, debit: taxDebit, credit: 0 }] : [])
             ]
@@ -95,13 +99,18 @@ export async function POST(req: Request) {
         // 3. Update Inventory Stock (Receipt) & Valuation
         const warehouse = await tx.warehouse.findFirst({ where: { tenantId: tenant.id } });
         if (warehouse) {
+          const discount = Number(discountAmount) || 0;
+          const discountFactor = subtotal > 0 ? Math.max(0, (subtotal - discount)) / subtotal : 1;
+
           for (const item of items) {
             if (item.productId) {
+              const discountedUnitCost = (Number(item.unitPrice) || 0) * discountFactor;
+
               await recordStockIn(tx, {
                 productId: item.productId,
                 warehouseId: warehouse.id,
                 quantity: Number(item.quantity) || 0,
-                unitCost: Number(item.unitPrice) || 0,
+                unitCost: discountedUnitCost,
                 tenantId: tenant.id
               });
             }

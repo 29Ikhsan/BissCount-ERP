@@ -7,10 +7,10 @@ const prismaClientSingleton = () => {
 type PrismaClientSingleton = ReturnType<typeof prismaClientSingleton>
 
 const globalForPrisma = globalThis as unknown as {
-  prisma_v2: PrismaClientSingleton | undefined
+  prisma_v3: PrismaClientSingleton | undefined
 }
 
 // Force refresh of prisma instance to pick up new models
-export const prisma = globalForPrisma.prisma_v2 ?? prismaClientSingleton()
+export const prisma = globalForPrisma.prisma_v3 ?? prismaClientSingleton()
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma_v2 = prisma
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma_v3 = prisma

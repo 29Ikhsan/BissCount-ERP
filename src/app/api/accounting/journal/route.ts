@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { isPeriodLocked } from '@/lib/closing-utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,6 +30,14 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { date, description, reference, lines } = body;
+
+    // --- FINANCIAL CONTROL: PERIOD LOCKING CHECK ---
+    const locked = await isPeriodLocked(new Date(date));
+    if (locked) {
+      return NextResponse.json({ 
+        error: 'Periode ini sudah dikunci (Closed). Tidak dapat menambah atau mengubah transaksi jurnal pada periode yang telah difinalisasi.' 
+      }, { status: 403 });
+    }
 
     if (!lines || lines.length < 2) {
       return NextResponse.json({ error: 'Journal entry must have at least 2 lines' }, { status: 400 });
@@ -61,6 +70,25 @@ export async function POST(request: NextRequest) {
       },
       include: { lines: true }
     });
+
+    // Create Audit Log Entry
+    try {
+      await prisma.auditLog.create({
+        data: {
+          action: 'CREATE_MANUAL_JOURNAL',
+          entity: 'JournalEntry',
+          entityId: entry.id,
+          tenantId: tenant.id,
+          details: {
+            description: entry.description,
+            reference: entry.reference,
+            totalAmount: totalDebit
+          }
+        }
+      });
+    } catch (auditErr) {
+      console.error('Audit Log failed:', auditErr);
+    }
 
     return NextResponse.json(entry);
   } catch (error: any) {

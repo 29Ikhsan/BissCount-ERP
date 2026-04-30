@@ -55,7 +55,7 @@ export default function BizzShell() {
           addLine('output', 'Modules:\n- /dashboard\n- /invoices\n- /expenses\n- /inventory\n- /reports\n- /settings\n- /contacts');
           break;
         case 'balance': {
-          const res = await fetch('/api/analytics/summary');
+          const res = await fetch('/api/accounting/analytics/summary');
           const data = await res.json();
           const balance = data.kpis?.totalCashBalance || 0;
           const formatted = formatCurrency(balance);

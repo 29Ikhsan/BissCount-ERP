@@ -56,7 +56,8 @@ export async function POST(request: NextRequest) {
     // Single Insert or Update
     const { 
       id, employeeId, name, email, department, jobTitle, salary, joinDate, 
-      ptkpStatus, npwp, nik, address, bankName, bankNumber, bankHolder, bpjsKes, bpjsKet 
+      ptkpStatus, npwp, nik, address, bankName, bankNumber, bankHolder, bpjsKes, bpjsKet,
+      tkuId, workerStatus, position, passportNo, facilityCap
     } = body;
 
     if (!employeeId || !name) return NextResponse.json({ error: 'ID and Name are required' }, { status: 400 });
@@ -78,6 +79,11 @@ export async function POST(request: NextRequest) {
       bankHolder: bankHolder || null,
       bpjsKes: bpjsKes || null,
       bpjsKet: bpjsKet || null,
+      tkuId: tkuId || null,
+      workerStatus: workerStatus || 'Resident',
+      position: position || jobTitle || null,
+      passportNo: passportNo || null,
+      facilityCap: facilityCap || 'N/A',
       tenantId: tenant.id,
       status: 'ACTIVE'
     };

@@ -175,6 +175,10 @@ model Invoice {
   supportDocPeriod String?
   facilityCap      String?
   sellerTkuId      String?       @default("0000000000000000000000")
+  dunningStatus    String        @default("NONE") // NONE, COMPLETED, PENALIZED
+  lateFee          Float         @default(0) // Default 0
+  autoEmail        Boolean       @default(false)
+  emailStatus      String        @default("NOT_SENT") // NOT_SENT, SENT, FAILED
   contact          Contact?      @relation(fields: [contactId], references: [id])
   costCenter       CostCenter?   @relation(fields: [costCenterId], references: [id])
   tenant           Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)

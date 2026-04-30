@@ -36,6 +36,22 @@ export default function EmployeesPage() {
     fetchEmployees();
   }, []);
 
+  const handleDeleteEmployee = async (id: string, name: string) => {
+    if (!confirm(`Tandai karyawan ${name} sebagai RESIGNED? Karyawan ini tidak akan tampil lagi di daftar gajian.`)) return;
+    try {
+      const res = await fetch(`/api/hrm/employees/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        showToast(`Karyawan ${name} berhasil di-resign-kan.`, 'success');
+        fetchEmployees();
+      } else {
+        const err = await res.json();
+        showToast(`Error: ${err.error}`, 'error');
+      }
+    } catch (err) {
+      showToast('Gagal menghapus karyawan.', 'error');
+    }
+  };
+
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -149,8 +165,9 @@ export default function EmployeesPage() {
   };
 
   const filteredEmployees = employees.filter(emp => 
-    emp.name.toLowerCase().includes(search.toLowerCase()) || 
-    emp.employeeId.toLowerCase().includes(search.toLowerCase())
+    emp.status !== 'RESIGNED' &&
+    (emp.name.toLowerCase().includes(search.toLowerCase()) || 
+    emp.employeeId.toLowerCase().includes(search.toLowerCase()))
   );
 
   return (
@@ -250,6 +267,14 @@ export default function EmployeesPage() {
                            onClick={() => setSelectedEmployee(emp)}
                          >
                            <Edit size={16}/>
+                         </button>
+                         <button 
+                           className={styles.iconBtn} 
+                           title="Resign Employee" 
+                           onClick={() => handleDeleteEmployee(emp.id, emp.name)}
+                           style={{ color: '#EF4444', marginLeft: '8px' }}
+                         >
+                           <Trash2 size={16}/>
                          </button>
                       </td>
                    </tr>

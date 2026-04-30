@@ -34,6 +34,7 @@ export default function Settings() {
   const [org, setOrg] = useState({
     name: '',
     taxId: '',
+    tkuId: '',
     address: '',
     fiscalYear: '',
     currency: 'IDR',
@@ -392,6 +393,16 @@ export default function Settings() {
                       value={org.taxId} 
                       onChange={(e) => setOrg({...org, taxId: e.target.value})}
                       className={styles.inputField} 
+                    />
+                  </div>
+                  <div className={styles.inputGroup}>
+                    <label>ID TKU / NITKU (22 DIGIT)</label>
+                    <input 
+                      type="text" 
+                      value={org.tkuId} 
+                      onChange={(e) => setOrg({...org, tkuId: e.target.value})}
+                      className={styles.inputField} 
+                      placeholder="0000000000000000000000"
                     />
                   </div>
                   <div className={styles.inputGroup} style={{ gridColumn: 'span 2' }}>

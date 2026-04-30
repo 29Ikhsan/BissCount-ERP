@@ -419,6 +419,27 @@
   background-color: var(--color-success-bg);
 }
 
+.actionEditBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background-color: white;
+  color: #0F3B8C;
+  border: 1.5px solid #0F3B8C;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.actionEditBtn:hover {
+  background-color: #f0f4ff;
+  border-color: #2563EB;
+  color: #2563EB;
+}
+
 .actionCancelBtn {
   display: flex;
   align-items: center;

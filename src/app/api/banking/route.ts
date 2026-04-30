@@ -37,39 +37,32 @@ export async function GET() {
       take: 50
     })
 
-    // 3. Smart Matcher Logic (Journal-based)
+    // 3. Smart Matcher Logic (Journal-based + Pending Expenses)
     const reconciliationLines = await Promise.all(unprocessedLines.map(async (line) => {
       let match = null
 
-      // Fuzzy Date Window: 3 days before/after statement date
+      // Fuzzy Date Window: 7 days window for bank processing
       const dateStart = new Date(line.date)
-      dateStart.setDate(dateStart.getDate() - 3)
+      dateStart.setDate(dateStart.getDate() - 5)
       const dateEnd = new Date(line.date)
-      dateEnd.setDate(dateEnd.getDate() + 3)
+      dateEnd.setDate(dateEnd.getDate() + 2)
 
-      // Find the offset JournalLine for context
+      // A. Look for existing Journal Entries (exact match)
       const potentialMatch = await prisma.journalLine.findFirst({
         where: {
           journalEntry: {
             tenantId: tenant.id,
             date: { gte: dateStart, lte: dateEnd }
           },
-          // Amount matches the offset side
-          // Withdrawal (-777k) should find the Debit offset side (+777k)
-          // Deposit (+777k) should find the Credit offset side (-777k)
           debit: line.amount < 0 ? Math.abs(line.amount) : 0, 
           credit: line.amount > 0 ? line.amount : 0,        
-          // Exclude bank account itself (starts with 1) to show the 'Categorized' account
-          NOT: {
-            account: { code: { startsWith: '1' } }
-          }
+          NOT: { account: { code: { startsWith: '1' } } }
         },
         include: { journalEntry: true, account: true }
       })
 
       if (potentialMatch) {
          const score = potentialMatch.journalEntry.date.toDateString() === line.date.toDateString() ? 100 : 85;
-
          match = { 
            type: score === 100 ? 'exact' : 'suggested', 
            score, 
@@ -77,6 +70,35 @@ export async function GET() {
            aksiaId: potentialMatch.journalEntryId,
            accountName: potentialMatch.account.name
          }
+      }
+
+      // B. Look for Pending Accrual Expenses (using referenceCode or Name/Amount)
+      if (!match && line.amount < 0) {
+        const absAmount = Math.abs(line.amount)
+        const pendingExpense = await prisma.expense.findFirst({
+          where: {
+            tenantId: tenant.id,
+            status: 'APPROVED',
+            OR: [
+              { referenceCode: { contains: line.description, mode: 'insensitive' } },
+              { AND: [
+                  { grandTotal: { gte: absAmount - 10, lte: absAmount + 10 } },
+                  { merchant: { contains: line.description.split(' ')[0], mode: 'insensitive' } }
+                ]
+              }
+            ]
+          }
+        })
+
+        if (pendingExpense) {
+           match = {
+             type: 'suggested',
+             score: 95,
+             aksiaRef: `Expense for ${pendingExpense.merchant}`,
+             aksiaId: `EXP:${pendingExpense.id}`, // Custom prefix to handle in POST
+             accountName: 'Accounts Payable'
+           }
+        }
       }
 
       return {
@@ -102,36 +124,65 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    console.log('[Banking POST Payload]:', JSON.stringify(body, null, 2));
-    const { lineId, targetId, costCenterId, action } = body;
+    const { lineId, targetId, action } = body;
     
     if (action === 'reconcile') {
       const tenant = await prisma.tenant.findFirst()
       if (!tenant) return NextResponse.json({ error: 'No Tenant' }, { status: 500 })
 
       const result = await prisma.$transaction(async (tx) => {
-        // 1. Fetch the Statement Line
         const line = await tx.bankStatementLine.findUnique({
           where: { id: lineId },
           include: { statement: true }
         })
         if (!line) throw new Error('Statement line not found')
 
-        let journalEntryId = targetId;
-        console.log('[Reconcile Debug]: journalEntryId received:', journalEntryId);
+        let finalJournalId = targetId;
 
-        // 2. Scenario: Create New Entry (if no match)
-        if (!journalEntryId) {
-          console.log('[Reconcile Debug]: No targetId, creating new JournalEntry...');
-          const suspenseAcc = await tx.account.findFirst({
-            where: { tenantId: tenant.id, code: '999' }
-          })
-          const bankAccount = await tx.account.findFirst({
-            where: { id: line.statement.accountId }
-          })
-          
-          if (!bankAccount) throw new Error(`Bank Account with ID ${line.statement.accountId} not found in COA`);
-          if (!suspenseAcc) throw new Error('Suspense Account (999) not found. Run account setup.');
+        // HANDLE CUSTOM PREFIXES
+        if (targetId && typeof targetId === 'string' && targetId.startsWith('EXP:')) {
+           const expenseId = targetId.split(':')[1];
+           const expense = await tx.expense.findUnique({
+             where: { id: expenseId },
+             include: { items: true }
+           })
+           if (!expense) throw new Error('Pending expense not found');
+
+           // 1. Create Payment Journal (Clear AP)
+           // Account Payable (2100) vs Bank (Statement Account)
+           const apAcc = await tx.account.findFirst({ where: { tenantId: tenant.id, code: '2100' } });
+           const bankAcc = await tx.account.findUnique({ where: { id: line.statement.accountId } });
+
+           if (!apAcc || !bankAcc) throw new Error('AP Account (2100) or Bank Account missing');
+
+           const paymentJournal = await tx.journalEntry.create({
+             data: {
+               date: line.date,
+               description: `Payment for Expense ${expense.referenceCode}: ${expense.merchant}`,
+               reference: `PAY-EXP-${expense.id.substring(0, 8)}`,
+               tenantId: tenant.id,
+               lines: {
+                 create: [
+                   { accountId: apAcc.id, debit: Math.abs(line.amount), credit: 0 },
+                   { accountId: bankAcc.id, debit: 0, credit: Math.abs(line.amount) }
+                 ]
+               }
+             }
+           })
+
+           // 2. Mark Expense as PAID
+           await tx.expense.update({
+             where: { id: expense.id },
+             data: { status: 'PAID' }
+           })
+
+           finalJournalId = paymentJournal.id;
+        } 
+        else if (!finalJournalId) {
+          // Manual/Create logic (Fallback to Suspense 999)
+          const suspenseAcc = await tx.account.findFirst({ where: { tenantId: tenant.id, code: '999' } })
+          const bankAccount = await tx.account.findUnique({ where: { id: line.statement.accountId } })
+          if (!bankAccount || !suspenseAcc) throw new Error('COA setup missing (999 or Bank ID)');
 
           const journal = await tx.journalEntry.create({
             data: {
@@ -147,18 +198,16 @@ export async function POST(req: Request) {
               }
             }
           })
-          journalEntryId = journal.id;
+          finalJournalId = journal.id;
         }
 
-        console.log('[Reconcile Debug]: Finalizing update for line', lineId, 'with journal', journalEntryId);
-
-        // 3. Mark Reconciled & Link
+        // Finalize statement line
         return await tx.bankStatementLine.update({
           where: { id: lineId },
           data: { 
             isReconciled: true, 
             reconciledAt: new Date(),
-            journalEntryId: journalEntryId
+            journalEntryId: finalJournalId
           }
         })
       })

@@ -11,21 +11,22 @@ export async function GET(request: NextRequest) {
       include: {
         _count: {
           select: { leads: true }
-        }
+        },
+        leads: true // Fetch actual leads to calculate their values
       },
       orderBy: { createdAt: 'desc' }
     });
 
     // Calculate ROI metrics for each campaign
-    const enhancedCampaigns = await Promise.all(campaigns.map(async (c) => {
-      const opportunities = await prisma.opportunity.findMany({
-        where: {
-          lead: { campaignId: c.id }
-        }
-      });
-
-      const totalValue = opportunities.reduce((sum, op) => sum + op.value, 0);
-      const wonValue = opportunities.filter(op => op.stage === 'WON').reduce((sum, op) => sum + op.value, 0);
+    const enhancedCampaigns = campaigns.map((c) => {
+      const allLeads = c._count ? (c as any).leads || [] : [];
+      
+      // We sum the value of ALL leads to get total pipeline
+      const totalValue = allLeads.reduce((sum: number, l: any) => sum + (l.value || 0), 0);
+      
+      // We only count 'QUALIFIED' leads as 'WON REVENUE' (Since QUALIFIED promotes to Customer)
+      const wonValue = allLeads.filter((l: any) => l.status === 'QUALIFIED').reduce((sum: number, l: any) => sum + (l.value || 0), 0);
+      
       const leadCount = c._count.leads;
 
       return {
@@ -33,9 +34,9 @@ export async function GET(request: NextRequest) {
         totalValue,
         wonValue,
         leadCount,
-        roi: c.actualSpend > 0 ? (wonValue / c.actualSpend * 1).toFixed(2) : 0
+        roi: c.actualSpend > 0 ? ((wonValue / c.actualSpend) * 100).toFixed(2) : 0
       };
-    }));
+    });
 
     return NextResponse.json(enhancedCampaigns);
   } catch (error: any) {

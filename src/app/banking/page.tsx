@@ -54,8 +54,21 @@ export default function Banking() {
   const [bankAccountsList, setBankAccountsList] = useState<any[]>([]);
   const [reconciliationList, setReconciliationList] = useState<any[]>([]);
   const [costCenters, setCostCenters] = useState<any[]>([]);
+  const [bankRules, setBankRules] = useState<any[]>([]);
   const [totalCash, setTotalCash] = useState(0);
   const [toast, setToast] = useState<{ visible: boolean, message: string } | null>(null);
+  
+  // Rule Creation State
+  const [isRuleModalOpen, setIsRuleModalOpen] = useState(false);
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [newRule, setNewRule] = useState({
+    name: '',
+    keywords: '',
+    condition: 'CONTAINS',
+    type: 'BOTH',
+    targetAccountId: '',
+    costCenterId: ''
+  });
 
   const triggerToast = (message: string) => {
     setToast({ visible: true, message });
@@ -65,36 +78,27 @@ export default function Banking() {
   useEffect(() => {
     const fetchBanking = async () => {
       try {
-        const [bankRes, ccRes] = await Promise.all([
+        const [bankRes, ccRes, rulesRes, accRes] = await Promise.all([
           fetch('/api/banking'),
-          fetch('/api/cost-centers')
+          fetch('/api/cost-centers'),
+          fetch('/api/banking/rules'),
+          fetch('/api/accounts')
         ]);
         const bankData = await bankRes.json();
         const ccData = await ccRes.json();
+        const rulesData = await rulesRes.json();
+        const accData = await accRes.json();
 
         if (bankData.accounts && bankData.accounts.length > 0) {
            setBankAccountsList(bankData.accounts);
            setActiveAccountId(bankData.accounts[0].id);
            const total = bankData.accounts.reduce((sum: number, acc: any) => sum + acc.balance, 0);
            setTotalCash(total);
-        } else {
-          // Fallback: show COA asset accounts with placeholder info
-          setBankAccountsList([{
-            id: 'setup',
-            name: 'Belum ada akun bank terhubung',
-            number: '—',
-            type: 'Setup Needed',
-            balance: 0,
-            lastSynced: '—',
-            status: 'Setup'
-          }]);
         }
-        if (bankData.reconciliationLines) {
-           setReconciliationList(bankData.reconciliationLines);
-        }
-        if (ccData.costCenters) {
-           setCostCenters(ccData.costCenters);
-        }
+        if (bankData.reconciliationLines) setReconciliationList(bankData.reconciliationLines);
+        if (ccData.costCenters) setCostCenters(ccData.costCenters);
+        if (rulesData.rules) setBankRules(rulesData.rules);
+        if (accData.accounts) setAccounts(accData.accounts);
       } catch (err) {
         console.error('Fetch banking failed', err);
       }
@@ -182,6 +186,25 @@ export default function Banking() {
       }
     };
     reader.readAsText(file);
+  };
+
+  const handleCreateRule = async () => {
+    try {
+      const res = await fetch('/api/banking/rules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newRule)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setBankRules([data.rule, ...bankRules]);
+        setIsRuleModalOpen(false);
+        triggerToast("Bank Rule created and activated!");
+        setNewRule({ name: '', keywords: '', condition: 'CONTAINS', type: 'BOTH', targetAccountId: '', costCenterId: '' });
+      }
+    } catch (e) {
+      triggerToast("Error creating rule.");
+    }
   };
 
   const handleSimulateFeed = async () => {
@@ -292,7 +315,35 @@ export default function Banking() {
             <div className={styles.workspaceHeader}>
               <div className={styles.workspaceTitleGroup}>
                 <h2 className={styles.workspaceTitle}>{t('BankingReconciliation')}</h2>
-                <span className={styles.badgeOrange}>{reconciliationList.length} {t('Unreconciled')}</span>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <span className={styles.badgeOrange}>{reconciliationList.length} {t('Unreconciled')}</span>
+                  {reconciliationList.length > 0 && (
+                    <button 
+                      className={styles.btnPrimary} 
+                      style={{ padding: '6px 12px', fontSize: '13px' }}
+                      onClick={async () => {
+                        triggerToast("Executing AI Intelligent Auto-Match...");
+                        try {
+                          const res = await fetch('/api/banking/reconcile', { method: 'POST' });
+                          const data = await res.json();
+                          if (data.success) {
+                            triggerToast(`Auto-Match Complete: ${data.matches} transactions reconciled!`);
+                            // Refresh list
+                            const bankRes = await fetch('/api/banking');
+                            const bankData = await bankRes.json();
+                            if (bankData.reconciliationLines) setReconciliationList(bankData.reconciliationLines);
+                          } else {
+                            triggerToast(data.error || "Auto-Match failed.");
+                          }
+                        } catch(e) {
+                          triggerToast("Network error during Auto-Match.");
+                        }
+                      }}
+                    >
+                      <Sparkles size={14} /> Auto-Match All
+                    </button>
+                  )}
+                </div>
               </div>
               
               <div className={styles.tabsContainer}>
@@ -390,15 +441,88 @@ export default function Banking() {
               </div>
             )}
 
-            {/* Empty States for other tabs */}
+            {/* Bank Rules Tab */}
             {activeTab === 'rules' && (
-              <div className={styles.emptyState}>
-                <RefreshCw size={32} className={styles.emptyIcon} />
-                <h4>Automate your bookkeeping</h4>
-                <p>Create bank rules to auto-categorize recurring transactions like software subscriptions or rent.</p>
-                <button className={styles.btnPrimary} style={{ marginTop: '16px' }}>Create Rule</button>
+              <div className={styles.feedContainer}>
+                <div style={{ padding: '20px', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h4 style={{ margin: 0 }}>Active Automation Rules</h4>
+                  <button className={styles.btnPrimary} onClick={() => setIsRuleModalOpen(true)}>+ Create Rule</button>
+                </div>
+                
+                <div className={styles.feedList}>
+                  {bankRules.map(rule => (
+                    <div key={rule.id} className={styles.feedItem} style={{ padding: '16px' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{rule.name}</div>
+                        <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+                          When description {rule.condition} <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>"{rule.keywords}"</span>
+                        </div>
+                      </div>
+                      <div style={{ flex: 1, textAlign: 'right' }}>
+                        <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>Map to Account:</div>
+                        <div style={{ fontWeight: 500 }}>{rule.targetAccount.code} - {rule.targetAccount.name}</div>
+                        {rule.costCenter && (
+                          <div style={{ fontSize: '11px', color: '#6366f1' }}>Cost Center: {rule.costCenter.name}</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {bankRules.length === 0 && (
+                    <div className={styles.emptyState}>
+                      <RefreshCw size={32} className={styles.emptyIcon} />
+                      <h4>Automate your bookkeeping</h4>
+                      <p>Create bank rules to auto-categorize recurring transactions like software subscriptions or rent.</p>
+                      <button className={styles.btnPrimary} style={{ marginTop: '16px' }} onClick={() => setIsRuleModalOpen(true)}>Create First Rule</button>
+                    </div>
+                  )}
+                </div>
+
+                {isRuleModalOpen && (
+                  <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                    <div style={{ backgroundColor: 'white', width: '100%', maxWidth: '500px', borderRadius: '12px', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+                      <h3>Create Bank Rule</h3>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+                        <input className={styles.btnOutline} style={{ textAlign: 'left' }} placeholder="Rule Name (e.g. AWS Hosting)" value={newRule.name} onChange={e => setNewRule({...newRule, name: e.target.value})} />
+                        <input className={styles.btnOutline} style={{ textAlign: 'left' }} placeholder="Keyword (e.g. AWS)" value={newRule.keywords} onChange={e => setNewRule({...newRule, keywords: e.target.value})} />
+                        
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <select className={styles.btnOutline} style={{ flex: 1 }} value={newRule.condition} onChange={e => setNewRule({...newRule, condition: e.target.value})}>
+                            <option value="CONTAINS">Contains</option>
+                            <option value="EXACT">Exactly Matches</option>
+                          </select>
+                          <select className={styles.btnOutline} style={{ flex: 1 }} value={newRule.type} onChange={e => setNewRule({...newRule, type: e.target.value})}>
+                            <option value="BOTH">All Transactions</option>
+                            <option value="DEBIT">Withdrawals only</option>
+                            <option value="CREDIT">Deposits only</option>
+                          </select>
+                        </div>
+
+                        <select className={styles.btnOutline} value={newRule.targetAccountId} onChange={e => setNewRule({...newRule, targetAccountId: e.target.value})}>
+                          <option value="">-- Select Target Account --</option>
+                          {accounts.map(acc => (
+                            <option key={acc.id} value={acc.id}>{acc.code} - {acc.name}</option>
+                          ))}
+                        </select>
+
+                        <select className={styles.btnOutline} value={newRule.costCenterId} onChange={e => setNewRule({...newRule, costCenterId: e.target.value})}>
+                          <option value="">-- Select Cost Center (Optional) --</option>
+                          {costCenters.map(cc => (
+                            <option key={cc.id} value={cc.id}>{cc.code} - {cc.name}</option>
+                          ))}
+                        </select>
+
+                        <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+                          <button className={styles.btnPrimary} style={{ flex: 1 }} onClick={handleCreateRule}>Activate Rule</button>
+                          <button className={styles.btnOutline} style={{ flex: 1 }} onClick={() => setIsRuleModalOpen(false)}>Cancel</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
+
+            {/* Empty State for statement tab */}
             {activeTab === 'statement' && (
               <div className={styles.emptyState}>
                 <FileStatementIcon />

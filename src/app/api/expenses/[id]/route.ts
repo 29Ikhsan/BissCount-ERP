@@ -69,6 +69,31 @@ export async function PATCH(
 
           const finalGrandTotal = subtotal + totalTax - totalWht;
           
+          const finalCostCenterId = costCenterId || existing.costCenterId;
+          
+          if (status === 'APPROVED' && finalCostCenterId) {
+             const cc = await tx.costCenter.findUnique({ where: { id: finalCostCenterId } });
+             if (cc && cc.budget > 0) {
+               const expenseYear = new Date(date || existing.date).getFullYear();
+               const existingExpenses = await tx.expense.aggregate({
+                 _sum: { grandTotal: true },
+                 where: {
+                   costCenterId: cc.id,
+                   status: { not: 'REJECTED' },
+                   id: { not: id }, // exclude this current draft
+                   date: {
+                     gte: new Date(`${expenseYear}-01-01`),
+                     lte: new Date(`${expenseYear}-12-31T23:59:59.999Z`)
+                   }
+                 }
+               });
+               const utilized = existingExpenses._sum.grandTotal || 0;
+               if (utilized + finalGrandTotal > cc.budget) {
+                  throw new Error(`BUDGET_EXCEEDED: This approval (IDR ${finalGrandTotal.toLocaleString()}) violates the strict budget ceiling of Cost Center [${cc.code}]! Remaining: IDR ${(cc.budget - utilized).toLocaleString()}`);
+               }
+             }
+          }
+          
           const finalExp = await tx.expense.update({
             where: { id },
             data: { 

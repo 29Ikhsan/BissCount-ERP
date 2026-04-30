@@ -1,7 +1,7 @@
 import { prisma } from './prisma';
 
 export async function recordAudit(
-  action: 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'LOGOUT' | 'CONFIG' | 'APPROVE' | 'REJECT',
+  action: 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'LOGOUT' | 'CONFIG' | 'APPROVE' | 'REJECT' | 'POST',
   entity: string,
   entityId: string,
   tenantId: string,

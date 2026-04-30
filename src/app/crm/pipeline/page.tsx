@@ -18,6 +18,7 @@ import {
   Clock
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 const STAGES = [
   { id: 'DISCOVERY', label: 'Discovery', color: '#3B82F6', prob: 10 },
@@ -28,6 +29,7 @@ const STAGES = [
 ];
 
 export default function PipelineBoard() {
+  const router = useRouter();
   const [opportunities, setOpportunities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [contacts, setContacts] = useState<any[]>([]);
@@ -293,7 +295,16 @@ export default function PipelineBoard() {
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label className={styles.label}>Associated Contact</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <label className={styles.label} style={{ marginBottom: 0 }}>Associated Contact</label>
+                    <button 
+                      type="button" 
+                      onClick={() => router.push('/contacts/new')} 
+                      style={{ fontSize: '11px', color: '#279C5A', background: 'none', border: 'none', fontWeight: 800, cursor: 'pointer' }}
+                    >
+                      + Quick Create
+                    </button>
+                  </div>
                   <select 
                     className={styles.select}
                     value={newDeal.contactId}

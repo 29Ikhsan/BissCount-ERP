@@ -14,9 +14,14 @@ import {
   Briefcase,
   Calendar,
   Users,
-  Building
+  Building,
+  Bot,
+  X,
+  FileDigit,
+  ArrowRight
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function PPh21Export() {
   const [data, setData] = useState<any[]>([]);
@@ -27,6 +32,8 @@ export default function PPh21Export() {
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear()
   });
+  const [selectedRecord, setSelectedRecord] = useState<any>(null);
+  const router = useRouter();
 
   const fetchData = () => {
     setLoading(true);
@@ -43,24 +50,8 @@ export default function PPh21Export() {
     fetchData();
   }, [period]);
 
-  const exportCSV = () => {
-    const headers = ['NO', 'PERIOD', 'EMPLOYEE_ID', 'NAME', 'NPWP', 'GROSS_INCOME', 'PPH_21_WITHHELD', 'TAX_ARTICLE'];
-    
-    const rows = data.map((item, idx) => [
-      idx + 1, item.period, item.employeeId, item.employeeName, 'NPWP-REQUIRED', 
-      item.grossPay, item.pph21, '21-100-01'
-    ]);
-
-    let csvContent = "data:text/csv;charset=utf-8," 
-      + headers.join(",") + "\n"
-      + rows.map(e => e.join(",")).join("\n");
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `EBupot_21_Tax_${period.month}_${period.year}.csv`);
-    document.body.appendChild(link);
-    link.click();
+  const exportCoreTax = () => {
+    window.open(`/api/taxation/export/pph21?month=${period.month}&year=${period.year}`, '_blank');
   };
 
   const filteredData = data.filter(item => 
@@ -92,8 +83,9 @@ export default function PPh21Export() {
             <p className={styles.subtitle}>Institutional reconciliation for workforce tax withholding and e-Bupot 21 generation.</p>
           </div>
         </div>
-        <button className={styles.btnPrimary} onClick={exportCSV}>
-          <Download size={16}/> Export e-Bupot 21 CSV
+        <button className={styles.btnPrimary} onClick={exportCoreTax} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Download size={16}/> 
+          {period.month === 12 ? 'Export CoreTax BPA1 (Annual)' : 'Export CoreTax BP21 (Monthly)'}
         </button>
       </div>
 
@@ -179,13 +171,79 @@ export default function PPh21Export() {
                         </span>
                      </td>
                      <td className={styles.textRight}>
-                        <button className={styles.moreBtn} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><ChevronRight size={16}/></button>
+                        <button className={styles.moreBtn} onClick={() => setSelectedRecord(item)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><ChevronRight size={16}/></button>
                      </td>
                   </tr>
                ))}
             </tbody>
          </table>
       </div>
+
+      {/* PPh 21 Detail Modal */}
+      {selectedRecord && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div className={styles.iconBox} style={{ backgroundColor: '#D1FAE5' }}><Users size={20} color="#065F46"/></div>
+                <div>
+                  <h2 className={styles.modalTitle}>Employee Tax Realization</h2>
+                  <p className={styles.modalSubtitle}>Detailed analysis for PPh Pasal 21 withholding.</p>
+                </div>
+              </div>
+              <button className={styles.closeBtn} onClick={() => setSelectedRecord(null)}><X size={20}/></button>
+            </div>
+
+            <div className={styles.modalBody}>
+               <div className={styles.detailGrid}>
+                  <div className={styles.detailRow}>
+                    <span className={styles.detailLabel}>Employee Name</span>
+                    <span className={styles.detailValue}>{selectedRecord.employeeName}</span>
+                  </div>
+                  <div className={styles.detailRow}>
+                    <span className={styles.detailLabel}>Employee ID</span>
+                    <span className={styles.detailValue}>{selectedRecord.employeeId}</span>
+                  </div>
+                  <div className={styles.detailRow}>
+                    <span className={styles.detailLabel}>Reporting Period</span>
+                    <span className={styles.detailValue}>{selectedRecord.period}</span>
+                  </div>
+                  <div className={styles.detailRow}>
+                    <span className={styles.detailLabel}>Compliance Status</span>
+                    <span className={styles.detailValue}>{selectedRecord.status}</span>
+                  </div>
+               </div>
+
+               <div className={styles.financialSummary}>
+                  <div className={styles.finRow}>
+                     <span>Gross Taxable Base</span>
+                     <span>Rp {selectedRecord.grossPay.toLocaleString()}</span>
+                  </div>
+                  <div className={styles.finRow} style={{ borderTop: '1px solid #E2E8F0', paddingTop: '12px', marginTop: '12px', fontWeight: 800 }}>
+                     <span>Tax Withheld (PPh 21)</span>
+                     <span style={{ color: '#EF4444' }}>Rp {selectedRecord.pph21.toLocaleString()}</span>
+                  </div>
+               </div>
+
+               <div className={styles.taraIntegration}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                    <Bot size={18} color="#279C5A"/>
+                    <span style={{ fontSize: '12px', fontWeight: 800, color: '#1E293B' }}>ASK TARA INTELLIGENCE</span>
+                  </div>
+                  <p style={{ fontSize: '11px', color: '#64748B', marginBottom: '16px' }}>
+                     Unsure about TRER (Tarif Efektif Rata-rata) or PTKP adjustments? TARA can explain the 2026 workforce tax logic.
+                  </p>
+                  <button 
+                    className={styles.taraBtn}
+                    onClick={() => router.push(`/tax-assistant?q=Explain PPh 21 calculation for income Rp ${selectedRecord.grossPay}`)}
+                  >
+                     Consult TARA <ArrowRight size={14}/>
+                  </button>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

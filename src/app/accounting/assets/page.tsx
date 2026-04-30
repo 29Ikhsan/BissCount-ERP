@@ -16,10 +16,14 @@ import {
   Layers,
   Calculator,
   Download,
+  Box,
   Truck,
-  HardDrive
+  HardDrive,
+  Bot
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import RoleGuard from '@/components/common/RoleGuard';
 
 export default function FixedAssetHub() {
   const [assets, setAssets] = useState<any[]>([]);
@@ -28,7 +32,9 @@ export default function FixedAssetHub() {
   // Modal States
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
   const [isDeprModalOpen, setIsDeprModalOpen] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
   
   const [newAsset, setNewAsset] = useState({
     name: '',
@@ -118,7 +124,8 @@ export default function FixedAssetHub() {
   );
 
   return (
-    <div className={styles.container}>
+    <RoleGuard moduleKey="AccountingReports">
+      <div className={styles.container}>
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
@@ -205,7 +212,7 @@ export default function FixedAssetHub() {
                    </div>
                 </td>
                 <td className={styles.textRight}>
-                   <button className={styles.moreBtn}><ChevronRight size={16}/></button>
+                   <button className={styles.moreBtn} onClick={() => setSelectedAsset(asset)}><ChevronRight size={16}/></button>
                 </td>
               </tr>
             ))}
@@ -327,6 +334,79 @@ export default function FixedAssetHub() {
            </div>
         </div>
       )}
-    </div>
+
+      {/* ASSET DETAIL MODAL */}
+      {selectedAsset && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div className={styles.iconBox} style={{ backgroundColor: '#DBEAFE' }}>
+                  {selectedAsset.category === 'VEHICLES' ? <Truck size={20} color="#1E40AF"/> : <HardDrive size={20} color="#1E40AF"/>}
+                </div>
+                <div>
+                  <h2 className={styles.modalTitle}>Capital Asset Audit</h2>
+                  <p className={styles.modalSubtitle}>Strategic realization for balance sheet reconciliation.</p>
+                </div>
+              </div>
+              <button className={styles.closeBtn} onClick={() => setSelectedAsset(null)}><X size={20}/></button>
+            </div>
+
+            <div className={styles.modalBody}>
+               <div className={styles.detailGrid}>
+                  <div className={styles.detailRow}>
+                    <span className={styles.detailLabel}>Asset Reference</span>
+                    <span className={styles.detailValue}>{selectedAsset.name}</span>
+                  </div>
+                  <div className={styles.detailRow}>
+                    <span className={styles.detailLabel}>Classification</span>
+                    <span className={styles.detailValue}>{selectedAsset.category}</span>
+                  </div>
+                  <div className={styles.detailRow}>
+                    <span className={styles.detailLabel}>Useful Life</span>
+                    <span className={styles.detailValue}>{selectedAsset.usefulLife} Months</span>
+                  </div>
+                  <div className={styles.detailRow}>
+                    <span className={styles.detailLabel}>Purchase Date</span>
+                    <span className={styles.detailValue}>{new Date(selectedAsset.purchaseDate).toLocaleDateString()}</span>
+                  </div>
+               </div>
+
+               <div className={styles.financialSummary}>
+                  <div className={styles.finRow}>
+                     <span>Acquisition Cost</span>
+                     <span>Rp {selectedAsset.cost.toLocaleString()}</span>
+                  </div>
+                  <div className={styles.finRow} style={{ marginTop: '4px' }}>
+                     <span>Accumulated Depr.</span>
+                     <span style={{ color: '#EF4444' }}>- Rp {selectedAsset.accumulatedDepr.toLocaleString()}</span>
+                  </div>
+                  <div className={styles.finRow} style={{ borderTop: '1px solid #E2E8F0', paddingTop: '12px', marginTop: '12px', fontWeight: 800 }}>
+                     <span>Net Book Value</span>
+                     <span style={{ color: '#279C5A' }}>Rp {selectedAsset.netBookValue.toLocaleString()}</span>
+                  </div>
+               </div>
+
+               <div className={styles.taraIntegration}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                    <Bot size={18} color="#279C5A"/>
+                    <span style={{ fontSize: '12px', fontWeight: 800, color: '#1E293B' }}>ASK TARA INTELLIGENCE</span>
+                  </div>
+                  <p style={{ fontSize: '11px', color: '#64748B', marginBottom: '16px' }}>
+                     Confused about the fiscal vs accounting depreciation for this {selectedAsset.category}? Ask TARA for regulation advice.
+                  </p>
+                  <button 
+                    className={styles.taraBtn}
+                    onClick={() => router.push(`/tax-assistant?q=Explain tax depreciation rules for ${selectedAsset.category} in Indonesia`)}
+                  >
+                     Consult TARA <ChevronRight size={14}/>
+                  </button>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      </div>
+    </RoleGuard>
   );
 }

@@ -203,6 +203,21 @@
   color: #374151;
 }
 
+.inputField {
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  width: 120px;
+  text-align: right;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.inputField:focus {
+  border-color: #10B981;
+}
+
 .empInfo {
   display: flex;
   align-items: center;

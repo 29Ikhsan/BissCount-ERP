@@ -14,6 +14,7 @@ export async function GET() {
       tenant: {
         name: tenant.name,
         taxId: tenant.taxId || '',
+        tkuId: tenant.tkuId || '0000000000000000000000',
         address: tenant.address || '',
         fiscalYear: tenant.fiscalYear || 'January to December',
         inventoryMethod: (tenant as any).inventoryMethod || 'AVERAGE',
@@ -63,6 +64,7 @@ export async function PATCH(req: Request) {
         data: {
           name: data.name,
           taxId: data.taxId,
+          tkuId: data.tkuId,
           address: data.address,
           fiscalYear: data.fiscalYear,
           inventoryMethod: data.inventoryMethod,

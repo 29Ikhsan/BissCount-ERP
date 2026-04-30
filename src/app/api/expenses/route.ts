@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { 
       date, merchant, items, employeeName, notes, costCenterId, 
-      contactId, taxPeriod, taxYear 
+      contactId, taxPeriod, taxYear, paymentMethod = 'CASH'
     } = body
 
     if (!merchant || !date || !items || !Array.isArray(items)) {
@@ -60,6 +60,36 @@ export async function POST(req: Request) {
 
       const grandTotal = subtotal + totalTax - totalWHT
 
+      // --- BUDGET GUARD (Corporate Budgets) ---
+      if (costCenterId) {
+        const costCenter = await tx.costCenter.findUnique({ where: { id: costCenterId } })
+        if (costCenter && costCenter.budget > 0) {
+          const expenseYear = new Date(date).getFullYear()
+          
+          // Calculate existing utilized budget for the year
+          const existingExpenses = await tx.expense.aggregate({
+            _sum: { grandTotal: true },
+            where: {
+              costCenterId: costCenter.id,
+              status: { not: 'REJECTED' },
+              date: {
+                gte: new Date(`${expenseYear}-01-01`),
+                lte: new Date(`${expenseYear}-12-31T23:59:59.999Z`)
+              }
+            }
+          })
+          
+          const utilizedBudget = existingExpenses._sum.grandTotal || 0
+          
+          if (utilizedBudget + grandTotal > costCenter.budget) {
+            throw new Error(`BUDGET_EXCEEDED: This expense of IDR ${grandTotal.toLocaleString()} will exceed the annual budget ceiling for Cost Center [${costCenter.code}]! Remaining Budget: IDR ${(costCenter.budget - utilizedBudget).toLocaleString()}`)
+          }
+        }
+      }
+      // ----------------------------------------
+
+      const refCode = `EXP-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`
+
       const expense = await tx.expense.create({
         data: {
           date: new Date(date),
@@ -68,7 +98,9 @@ export async function POST(req: Request) {
           amount: subtotal,
           taxAmount: totalTax,
           grandTotal: grandTotal,
-          status: 'PAID',
+          status: paymentMethod === 'BANK_TRANSFER' ? 'APPROVED' : 'PAID',
+          paymentMethod,
+          referenceCode: refCode,
           employeeName: employeeName || 'System User',
           receiptUrl: notes || '',
           tenantId: tenant.id,
@@ -82,13 +114,15 @@ export async function POST(req: Request) {
       })
 
       // 2. Automated Ledger Posting
-      const accCash = await findAccountByCode(tenant.id, '1001', tx)
+      const isAccrual = paymentMethod === 'BANK_TRANSFER'
+      const creditAccCode = isAccrual ? '2100' : '1001' // 2100 for AP, 1001 for Cash
+      const accCredit = await findAccountByCode(tenant.id, creditAccCode, tx)
       const accTax = await findAccountByCode(tenant.id, '2002', tx)
       const accWHT = await findAccountByCode(tenant.id, '2003', tx) // PPh Payable
 
-      if (accCash) {
+      if (accCredit) {
         const journalLines = [
-          { accountId: accCash.id, debit: 0, credit: grandTotal },
+          { accountId: accCredit.id, debit: 0, credit: grandTotal },
           ...(totalTax > 0 && accTax ? [{ accountId: accTax.id, debit: totalTax, credit: 0 }] : []),
           ...(totalWHT > 0 && accWHT ? [{ accountId: accWHT.id, debit: 0, credit: totalWHT }] : [])
         ]
@@ -105,7 +139,9 @@ export async function POST(req: Request) {
 
         await postToLedger(tx, {
           date: new Date(date),
-          description: `Automatic Journal: Expense for ${merchant} (incl. WHT Unifikasi)`,
+          description: isAccrual 
+            ? `Expense Accrual: ${merchant} (Ref: ${refCode})`
+            : `Automatic Journal: Expense for ${merchant} (incl. WHT Unifikasi)`,
           reference: `EXP-${expense.id}`,
           tenantId: tenant.id,
           lines: journalLines

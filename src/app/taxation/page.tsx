@@ -5,22 +5,16 @@ import styles from './page.module.css';
 import { 
   ShieldCheck, 
   FileText, 
-  Download, 
   Activity, 
   ArrowRight, 
-  HelpCircle, 
-  AlertTriangle,
   PieChart,
-  Target,
-  Search,
-  Settings,
-  ChevronRight,
-  TrendingUp,
-  MessageSquare,
   Bot,
-  Users
+  MessageSquare,
+  Users,
+  AlertCircle
 } from 'lucide-react';
 import Link from 'next/link';
+import RoleGuard from '@/components/common/RoleGuard';
 
 export default function TaxationHub() {
   const [stats, setStats] = useState<any>(null);
@@ -72,12 +66,13 @@ export default function TaxationHub() {
   );
 
   return (
-    <div className={styles.container}>
+    <RoleGuard moduleKey="TaxCompliance">
+      <div className={styles.container}>
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <div className={styles.iconBox} style={{ backgroundColor: 'rgba(39, 156, 90, 0.1)' }}>
-            <ShieldCheck size={24} color="#279C5A"/>
+          <div className={styles.iconBox}>
+            <ShieldCheck size={28} color="#279C5A"/>
           </div>
           <div className={styles.headerTitleGroup}>
             <h1 className={styles.title}>Tax & Compliance</h1>
@@ -101,29 +96,31 @@ export default function TaxationHub() {
                 {years.map(y => <option key={y} value={y}>{y}</option>)}
               </select>
            </div>
-           <button className={styles.integratedBadge}><ShieldCheck size={14}/> DJP SYNCHRONIZED</button>
+           <div className={styles.integratedBadge}>
+              <Activity size={12}/> DJP SYNCHRONIZED
+           </div>
         </div>
       </div>
 
       {/* TARA HERO INSIGHT */}
-      <div className={styles.panel} style={{ marginBottom: '32px', background: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)', border: 'none', color: 'white' }}>
-         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-               <div className={styles.iconBox} style={{ backgroundColor: 'rgba(39, 156, 90, 0.2)', width: '64px', height: '64px' }}>
+      <div className={styles.taraHero}>
+          <div className={styles.taraContent}>
+            <div className={styles.taraInfo}>
+               <div className={styles.taraIconBox}>
                   <Bot size={32} color="#279C5A"/>
                </div>
                <div>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white', marginBottom: '4px' }}>Strategic Tax Intelligence (TARA)</h2>
-                  <p style={{ opacity: 0.8, fontSize: '0.9rem', maxWidth: '600px' }}>
-                     Your AI assistant is analyzing the latest 2026 Indonesian tax regulations (PMK). 
-                     Current environment: PPN 12% Active. PPh Unifikasi e-Bupot integration stable.
+                  <h2 className={styles.taraTitle}>Strategic Tax Intelligence (TARA)</h2>
+                  <p className={styles.taraDesc}>
+                     Your AI assistant is analyzing the latest 2026 Indonesian tax regulations (PMK 12/2026). 
+                     Current environment: <strong>PPN 12% Active</strong>. PPh Unifikasi e-Bupot integration stable and monitored.
                   </p>
                </div>
             </div>
-            <Link href="/tax-assistant" className={styles.btnPrimary} style={{ background: '#279C5A', border: 'none' }}>
-               Consult with TARA <MessageSquare size={16}/>
+            <Link href="/tax-assistant" className={styles.btnPrimary} style={{ background: '#279C5A', border: 'none', minWidth: '220px' }}>
+               Consult with TARA Specialist <MessageSquare size={16}/>
             </Link>
-         </div>
+          </div>
       </div>
 
       {/* Metrics Grid */}
@@ -134,21 +131,21 @@ export default function TaxationHub() {
            <div className={styles.metricSub}>VAT OUTBOUND COLLECTION</div>
         </div>
         <div className={styles.metricCard}>
-           <div className={styles.metricLabel}>Withholding Tax (YTD)</div>
+           <div className={styles.metricLabel}>Unified PPh (YTD)</div>
            <div className={styles.metricValue}>Rp {(stats?.totalPPh || 0).toLocaleString()}</div>
-           <div className={styles.metricSub}>UNIFIED PPH COLLECTION</div>
+           <div className={styles.metricSub}>WITHHOLDING AGGREGATE</div>
         </div>
         <div className={styles.metricCard}>
            <div className={styles.metricLabel}>Compliance Health</div>
-           <div className={styles.metricValue} style={{ color: stats?.ppnIncomplete > 0 ? '#EF4444' : '#279C5A' }}>
-              {stats?.ppnIncomplete > 0 ? `${stats.ppnIncomplete} Missing Tax IDs` : '100% REGULATED'}
+           <div className={styles.metricValue} style={{ color: stats?.ppnIncomplete > 0 ? '#EF4444' : '#10B981' }}>
+              {stats?.ppnIncomplete > 0 ? `${stats.ppnIncomplete} Missing IDs` : '100% SECURE'}
            </div>
            <div className={styles.metricSub}>DATA INTEGRITY SCORE</div>
         </div>
         <div className={styles.metricCard}>
-           <div className={styles.metricLabel}>Active Certificates</div>
-           <div className={styles.metricValue}>Active</div>
-           <div className={styles.metricSub}>E-FAKTUR STATUS</div>
+           <div className={styles.metricLabel}>Audit Readiness</div>
+           <div className={styles.metricValue}>High</div>
+           <div className={styles.metricSub}>REGULATORY POSITION</div>
         </div>
       </div>
 
@@ -158,10 +155,11 @@ export default function TaxationHub() {
            <h2 className={styles.panelTitle}><FileText size={20} color="#279C5A"/> PPN Keluaran (e-Faktur)</h2>
            <p className={styles.panelDescription}>
               Manage Outbound VAT from sales invoices. Verify customer NPWP and address 
-              before exporting to e-Faktur CSV importer.
+              before exporting to institutional e-Faktur CSV formats.
            </p>
            <div className={styles.statusIndicator}>
-              <Activity size={16}/> {stats?.ppnIncomplete} transactions require NPWP review.
+              {stats?.ppnIncomplete > 0 ? <AlertCircle size={14} color="#EF4444"/> : <ShieldCheck size={14} color="#10B981"/>}
+              <span>{stats?.ppnIncomplete > 0 ? `${stats.ppnIncomplete} transactions require review` : 'All transactions validated'}</span>
            </div>
            <div style={{ marginTop: '24px' }}>
               <Link href="/taxation/ppn" className={styles.btnPrimary}>
@@ -174,11 +172,12 @@ export default function TaxationHub() {
         <div className={styles.panel}>
            <h2 className={styles.panelTitle}><PieChart size={20} color="#279C5A"/> PPh Unifikasi (e-Bupot)</h2>
            <p className={styles.panelDescription}>
-              Aggregate withholding taxes from vendor payments (PPh 23, 21, 4(2)). 
-              Generate unified tax reports for DJP compliance.
+              Aggregate withholding taxes from vendor payments. Generate unified tax 
+              reports for full compliance with DJP reporting standards.
            </p>
            <div className={styles.statusIndicator}>
-              <TrendingUp size={16}/> {stats?.pphCount} withholding lines recorded this period.
+              <Activity size={14} color="#3B82F6"/> 
+              <span>{stats?.pphCount} withholding lines recorded</span>
            </div>
            <div style={{ marginTop: '24px' }}>
               <Link href="/taxation/pph-unifikasi" className={styles.btnPrimary}>
@@ -191,11 +190,12 @@ export default function TaxationHub() {
         <div className={styles.panel}>
            <h2 className={styles.panelTitle}><Users size={20} color="#279C5A"/> PPh Pasal 21 (Payroll)</h2>
            <p className={styles.panelDescription}>
-              Reconcile Income Tax Article 21 from monthly payroll. Generate e-Bupot 21 
-              certificates for employees and institutional reporting.
+              Reconcile Income Tax Article 21 from monthly payroll. Integrated with 
+              HRM and individual employee tax profiles.
            </p>
            <div className={styles.statusIndicator}>
-              <Activity size={16}/> Integrated with HRM & Payroll Ledger.
+              <ShieldCheck size={14} color="#10B981"/> 
+              <span>Integrated with HRM & Payroll Ledger</span>
            </div>
            <div style={{ marginTop: '24px' }}>
               <Link href="/taxation/pph21" className={styles.btnPrimary}>
@@ -204,21 +204,7 @@ export default function TaxationHub() {
            </div>
         </div>
       </div>
-
-      {/* TARA Integration Card */}
-      <div className={styles.panel} style={{ marginTop: '32px', background: 'linear-gradient(135deg, #279C5A 0%, #1e7d48 100%)', color: 'white' }}>
-         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-               <h2 className={styles.panelTitle} style={{ color: 'white' }}><HelpCircle size={20}/> Consult with TARA</h2>
-               <p style={{ opacity: 0.9, fontSize: '0.9rem' }}>
-                  Unsure about PPN 12% or PPh 23 rates? Ask TARA, your integrated Tax Assistant Robot.
-               </p>
-            </div>
-            <Link href="/tax-assistant" className={styles.btnPrimary} style={{ background: 'white', color: '#279C5A' }}>
-               Start Consultation <MessageSquare size={16}/>
-            </Link>
-         </div>
-      </div>
     </div>
+    </RoleGuard>
   );
 }

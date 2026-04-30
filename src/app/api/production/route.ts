@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '../../../generated/client';
+import { calculateCOGS } from '@/lib/inventoryValuation';
 const prisma = new PrismaClient();
 
 export async function GET(req: Request) {
@@ -64,6 +65,21 @@ export async function PATCH(req: Request) {
     if (action === 'START' && order.status === 'PLANNED') {
       if (!order.warehouseId) return NextResponse.json({ error: 'Warehouse required to start' }, { status: 400 });
 
+      // --- FINANCIAL CONTROL: PRE-FLIGHT INVENTORY VALIDATION ---
+      for (const bomItem of order.product.finishedBOMItems) {
+        const consumptionQty = bomItem.quantityRequired * order.quantity;
+        const level = await prisma.inventoryLevel.findFirst({
+           where: { productId: bomItem.rawProductId, warehouseId: order.warehouseId }
+        });
+        const currentStock = level ? level.quantity : 0;
+        
+        if (consumptionQty > currentStock) {
+           return NextResponse.json({ 
+              error: `Production Blocked: Insufficient Raw Materials. Need ${consumptionQty} units, but only ${currentStock} units exist.` 
+           }, { status: 400 });
+        }
+      }
+
       // BOM Consumption Transaction
       await prisma.$transaction(async (tx) => {
         for (const bomItem of order.product.finishedBOMItems) {
@@ -93,16 +109,20 @@ export async function PATCH(req: Request) {
 
     if (action === 'COMPLETE' && order.status === 'IN_PROGRESS') {
       await prisma.$transaction(async (tx) => {
-        // Calculate Total Material Cost from BOM
-        // We need to fetch the raw products costs
-        const bomItemsWithCosts = await tx.bOMItem.findMany({
-          where: { finishedProductId: order.productId },
-          include: { rawProduct: true }
+        // --- CALCULATION OF ACTUAL COGS (Depleting FIFO Batches) ---
+        const bomItems = await tx.bOMItem.findMany({
+          where: { finishedProductId: order.productId }
         });
 
-        const totalCost = bomItemsWithCosts.reduce((sum, item) => {
-          return sum + (item.quantityRequired * order.quantity * (item.rawProduct.cost || 0));
-        }, 0);
+        let totalCost = 0;
+        for (const item of bomItems) {
+           const requiredQty = item.quantityRequired * order.quantity;
+           totalCost += await calculateCOGS(tx, {
+              productId: item.rawProductId,
+              quantity: requiredQty,
+              tenantId: order.tenantId
+           });
+        }
 
         // Add Finished Good to Warehouse
         await tx.inventoryLevel.upsert({

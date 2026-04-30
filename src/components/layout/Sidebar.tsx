@@ -3,6 +3,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 
 import { useLanguage } from '@/context/LanguageContext';
+import { useSession } from 'next-auth/react';
+import { canAccessModule, Role } from '@/lib/access';
 import styles from './Sidebar.module.css';
 import { 
   BarChart, 
@@ -16,6 +18,7 @@ import {
   BrainCircuit,
   Archive,
   Landmark,
+  PieChart,
   ShoppingCart,
   Users,
   Briefcase,
@@ -94,15 +97,16 @@ const menuItems = [
   { 
     name: 'Accounting Reports', 
     icon: BarChart, 
-    path: '/reports', 
+    path: '/accounting/reports', 
     key: 'AccountingReports',
     subItems: [
-      { name: 'Financial Journal', icon: BookOpen, path: '/journal', key: 'Journal' },
-      { name: 'Fixed Assets', icon: Archive, path: '/assets', key: 'Assets' },
-      { name: 'Closing', icon: Lock, path: '/closing', key: 'Closing' },
+      { name: 'Journal & Ledger', icon: BookOpen, path: '/accounting/ledger', key: 'Journal' },
+      { name: 'Fixed Assets', icon: Archive, path: '/accounting/assets', key: 'Assets' },
+      { name: 'Prepayments & Amortization', icon: TrendingUp, path: '/accounting/amortization', key: 'Amortization' },
+      { name: 'Balance Sheet & P&L', icon: PieChart, path: '/accounting/reports', key: 'AccountingDash' },
+      { name: 'Closing Period', icon: Lock, path: '/accounting/closing', key: 'Closing' },
       { name: 'Chart of Accounts', icon: FileText, path: '/settings/coa', key: 'COA' },
-      { name: 'Financial Intelligence (FIRA)', icon: BrainCircuit, path: '/analytics', key: 'AIAnalyst' },
-      { name: 'Inventory Reports', icon: Archive, path: '/reports/inventory', key: 'InventoryValuation' }
+      { name: 'Financial Intelligence (FIRA)', icon: BrainCircuit, path: '/accounting/analytics', key: 'AIAnalyst' }
     ]
   },
   { 
@@ -111,14 +115,21 @@ const menuItems = [
     path: '/settings', 
     key: 'Settings',
     subItems: [
-      { name: 'Audit Log', icon: Shield, path: '/settings/audit', key: 'AuditLog' }
+      { name: 'Audit Log', icon: Shield, path: '/settings/audit', key: 'AuditLog' },
+      { name: 'User Management', icon: Users, path: '/settings/users', key: 'UserManagement' }
     ]
   },
 ];
 
 export default function Sidebar() {
   const { t } = useLanguage();
+  const { data: session } = useSession();
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
+
+  const userRole = (session?.user as any)?.role as Role || 'USER';
+  const userPermissions = (session?.user as any)?.permissions || [];
+
+  const filteredMenuItems = menuItems.filter(item => canAccessModule(userRole, item.key, userPermissions));
 
   const toggleSubMenu = (key: string, e: React.MouseEvent) => {
     setExpandedItems((prev: Record<string, boolean>) => ({
@@ -140,7 +151,7 @@ export default function Sidebar() {
       
       <nav className={styles.nav}>
         <ul>
-          {menuItems.map((item) => (
+          {filteredMenuItems.map((item) => (
             <li key={item.key}>
               <div className={styles.navItemWrapper}>
                 <Link href={item.path} className={styles.navItem}>

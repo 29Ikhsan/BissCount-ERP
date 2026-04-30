@@ -233,7 +233,11 @@ exports.Prisma.InvoiceScalarFieldEnum = {
   supportDoc: 'supportDoc',
   supportDocPeriod: 'supportDocPeriod',
   facilityCap: 'facilityCap',
-  sellerTkuId: 'sellerTkuId'
+  sellerTkuId: 'sellerTkuId',
+  dunningStatus: 'dunningStatus',
+  lateFee: 'lateFee',
+  autoEmail: 'autoEmail',
+  emailStatus: 'emailStatus'
 };
 
 exports.Prisma.InvoiceItemScalarFieldEnum = {
