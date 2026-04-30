@@ -42,6 +42,10 @@ next-env.d.ts
 
 /src/generated/prisma
 
+# platform-specific Prisma query engine binaries (regenerated per host)
+/src/generated/client/libquery_engine-*.so.node
+/src/generated/client/query_engine-*.dll.node
+
 # local dev database
 /prisma/*.db
 /prisma/*.db-journal
